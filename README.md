@@ -75,6 +75,7 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 - [x] Replace the top-right add control with a floating action button  
 - [x] Hide the Unassigned filter unless there are active unassigned tasks  
 - [x] Keep project emojis visible for completed tasks even after a project is deleted  
+- [x] Autofocus the add-task title field when opening the floating button sheet  
 - [ ] Rearrange tasks via long press  
 - [ ] Add due time to tasks
 - [ ] Implement CloudKit for database and sync

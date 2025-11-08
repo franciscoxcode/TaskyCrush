@@ -3,6 +3,7 @@ import SwiftUI
 struct AddTaskView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title: String = ""
+    @FocusState private var isTitleFieldFocused: Bool
 
     // Projects input and callbacks
     let projects: [ProjectItem]
@@ -96,6 +97,7 @@ struct AddTaskView: View {
                         TextField("Enter task title", text: $title)
                             .textInputAutocapitalization(.sentences)
                             .submitLabel(.done)
+                            .focused($isTitleFieldFocused)
                     }
 
                     Section {
@@ -537,6 +539,11 @@ struct AddTaskView: View {
                     .onAppear { isNewTagFocused = true }
                 }
                 .ignoresSafeArea(.keyboard)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.async {
+                isTitleFieldFocused = true
             }
         }
     }
