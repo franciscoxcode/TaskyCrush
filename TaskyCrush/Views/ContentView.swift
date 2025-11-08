@@ -76,11 +76,13 @@ struct ContentView: View {
                         userPoints = 0
                         UserDefaults.standard.set(0, forKey: "userPoints")
                     },
-                    onManage: { isPresentingManageProjects = true },
                     onAdd: { isPresentingAdd = true }
                 )
 
-                TitleRow(points: userPoints) { showingCompletedSheet = true }
+                TitleRow(
+                    points: userPoints,
+                    onManage: { isPresentingManageProjects = true }
+                ) { showingCompletedSheet = true }
 
                 // Row 3: projects bar
                 StoriesBar(projects: viewModel.projects, hasInbox: hasInbox, selectedFilter: $selectedFilter, onNew: {
@@ -303,7 +305,6 @@ extension ContentView {
     // Small subviews to simplify type inference in body
     private struct TopBarButtons: View {
         var onReset: () -> Void
-        var onManage: () -> Void
         var onAdd: () -> Void
         var body: some View {
             HStack {
@@ -317,11 +318,6 @@ extension ContentView {
                 .padding(.trailing, 8)
                 #endif
                 #endif
-                Button(action: onManage) {
-                    Image(systemName: "line.3.horizontal").font(.headline)
-                }
-                .accessibilityLabel("Manage Projects")
-                .padding(.trailing, 8)
                 Button(action: onAdd) {
                     Image(systemName: "plus").font(.headline)
                 }
@@ -333,10 +329,16 @@ extension ContentView {
 
     private struct TitleRow: View {
         let points: Int
+        var onManage: () -> Void
         var onPointsTap: () -> Void
         var body: some View {
-            HStack(alignment: .center) {
-                Text("NoteBites")
+            HStack(alignment: .center, spacing: 12) {
+                Button(action: onManage) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.headline)
+                }
+                .accessibilityLabel("Manage Projects")
+                Text("Tasky Crush")
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
