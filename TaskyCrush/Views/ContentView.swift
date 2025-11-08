@@ -63,7 +63,14 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            mainContent
+            ZStack(alignment: .bottomTrailing) {
+                mainContent
+                FloatingAddButton {
+                    isPresentingAdd = true
+                }
+                .padding(.trailing, 36)
+                .padding(.bottom, 4)
+            }
         }
     }
 
@@ -75,8 +82,7 @@ struct ContentView: View {
                         viewModel.resetAndSeedSampleData()
                         userPoints = 0
                         UserDefaults.standard.set(0, forKey: "userPoints")
-                    },
-                    onAdd: { isPresentingAdd = true }
+                    }
                 )
 
                 TitleRow(
@@ -305,7 +311,6 @@ extension ContentView {
     // Small subviews to simplify type inference in body
     private struct TopBarButtons: View {
         var onReset: () -> Void
-        var onAdd: () -> Void
         var body: some View {
             HStack {
                 Spacer()
@@ -318,10 +323,6 @@ extension ContentView {
                 .padding(.trailing, 8)
                 #endif
                 #endif
-                Button(action: onAdd) {
-                    Image(systemName: "plus").font(.headline)
-                }
-                .accessibilityLabel("Add Task")
             }
             .padding(.horizontal, 8)
         }
@@ -347,6 +348,24 @@ extension ContentView {
             .padding(.top, 21)
             .padding(.bottom, 13)
             .padding(.horizontal, 8)
+        }
+    }
+
+    private struct FloatingAddButton: View {
+        var action: () -> Void
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 58, height: 58)
+                    .background(
+                        Circle()
+                            .fill(Color.accentColor)
+                    )
+            }
+            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 6)
+            .accessibilityLabel("Add Task")
         }
     }
     private var projectColorSwatches: [Color] {
