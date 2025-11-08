@@ -106,7 +106,7 @@ struct ContentView: View {
             }
             .onChangeCompat(of: viewModel.tasks) { _, tasks in
                 // If there are no inbox tasks anymore, clear inbox filter
-                if selectedFilter == .inbox && !tasks.contains(where: { $0.project == nil }) {
+                if selectedFilter == .inbox && !tasks.contains(where: { $0.project == nil && !$0.isDone }) {
                     selectedFilter = .none
                 }
             }
@@ -372,7 +372,7 @@ extension ContentView {
         [.yellow, .green, .blue, .purple, .pink, .orange, .teal, .mint, .indigo, .red, .brown, .gray]
     }
     private var hasInbox: Bool {
-        viewModel.tasks.contains { $0.project == nil }
+        viewModel.tasks.contains { $0.project == nil && !$0.isDone }
     }
 
     private var baseTasks: [TaskItem] {
