@@ -270,10 +270,11 @@ final class HomeViewModel: ObservableObject {
         projects.removeAll { $0.id == id }
         // Unassign any tasks that referenced this project
         for i in tasks.indices {
-            if tasks[i].project?.id == id {
-                tasks[i].project = nil
-                tasks[i].tag = nil
-            }
+            guard tasks[i].project?.id == id else { continue }
+            // Keep project info on completed tasks so history stays intact
+            if tasks[i].isDone { continue }
+            tasks[i].project = nil
+            tasks[i].tag = nil
         }
         // Persist both since tasks may have been modified
         saveProjects()
