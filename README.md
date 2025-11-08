@@ -71,6 +71,10 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 - [x] Add repeat options for recurring tasks  
 - [x] Support full markdown notes per task  
 - [x] Improve notes performance  
+- [x] Move the manage-project button next to the Tasky Crush title for a cleaner header  
+- [x] Replace the top-right add control with a floating action button  
+- [x] Hide the Unassigned filter unless there are active unassigned tasks  
+- [x] Keep project emojis visible for completed tasks even after a project is deleted  
 - [ ] Rearrange tasks via long press  
 - [ ] Add due time to tasks
 - [ ] Implement CloudKit for database and sync
