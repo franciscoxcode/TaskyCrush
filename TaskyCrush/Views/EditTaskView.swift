@@ -245,7 +245,7 @@ struct EditTaskView: View {
                                 Text("Reminder")
                                     .font(.headline)
                             }
-                            .onChange(of: hasReminder) { newValue in
+                            .onChangeCompat(of: hasReminder) { _, newValue in
                                 if newValue { NotificationManager.shared.requestAuthorizationIfNeeded() }
                             }
                         }

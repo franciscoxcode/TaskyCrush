@@ -99,7 +99,7 @@ enum RecurrenceEngine {
         var cal = Calendar.current
         cal.firstWeekday = 1
         let wd = cal.component(.weekday, from: date)
-        var diff = wd - 7
+        let diff = wd - 7
         return cal.date(byAdding: .day, value: -diff, to: date) ?? date
     }
 
@@ -117,7 +117,7 @@ enum RecurrenceEngine {
     }
 
     private static func addYearsClamped(_ years: Int, to date: Date) -> Date {
-        var cal = Calendar.current
+        let cal = Calendar.current
         let comps = cal.dateComponents([.year, .month, .day], from: date)
         var y = DateComponents()
         y.year = years

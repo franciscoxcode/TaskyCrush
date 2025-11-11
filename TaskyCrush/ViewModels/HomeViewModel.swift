@@ -321,7 +321,7 @@ final class HomeViewModel: ObservableObject {
         if previousProjectId != project?.id {
             current.tag = nil
         }
-        if let p = project, let rawTag = tag?.trimmingCharacters(in: .whitespacesAndNewlines), !rawTag.isEmpty {
+        if project != nil, let rawTag = tag?.trimmingCharacters(in: .whitespacesAndNewlines), !rawTag.isEmpty {
             current.tag = rawTag
         } else if project == nil {
             current.tag = nil
@@ -355,7 +355,7 @@ final class HomeViewModel: ObservableObject {
             tasks[idx].completedAt = Date()
             NotificationManager.shared.cancelReminder(for: id)
             // Handle recurrence: generate next occurrence if applicable and within limit
-            if var rule = tasks[idx].recurrence {
+            if let rule = tasks[idx].recurrence {
                 let doneCount = rule.occurrencesDone + 1
                 if let limit = rule.countLimit, doneCount >= limit {
                     // Do not create a next one; keep history only
