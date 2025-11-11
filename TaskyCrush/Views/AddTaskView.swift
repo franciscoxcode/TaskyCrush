@@ -13,8 +13,8 @@ struct AddTaskView: View {
     var onAddProjectTag: (ProjectItem.ID, String) -> Void
     var onRenameProjectTag: (ProjectItem.ID, String, String) -> Void = { _,_,_ in }
     var onDeleteProjectTag: (ProjectItem.ID, String) -> Void = { _,_ in }
-    var onSave: (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ reminderAt: Date?) -> Void
-    var onSaveFull: ((_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ reminderAt: Date?, _ tag: String?, _ recurrence: RecurrenceRule?) -> Void)? = nil
+    var onSave: (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ dueTime: DateComponents?, _ reminders: [TaskReminder]) -> Void
+    var onSaveFull: ((_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ dueTime: DateComponents?, _ reminders: [TaskReminder], _ tag: String?, _ recurrence: RecurrenceRule?) -> Void)? = nil
 
     // Selection state
     @State private var selectedProjectId: ProjectItem.ID?
@@ -39,9 +39,10 @@ struct AddTaskView: View {
     @State private var dueDate: Date = TaskItem.defaultDueDate()
     @State private var showDueInfo = false
     @State private var showCustomDatePicker = false
-    // Reminder
-    @State private var hasReminder: Bool = false
-    @State private var reminderTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+    // Due time & reminders
+    @State private var hasDueTime: Bool = false
+    @State private var dueTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var reminderDrafts: [TaskReminder] = []
     // Tag (scoped to selected project)
     @State private var tagText: String = ""
     @State private var showNewTagSheet: Bool = false
@@ -61,7 +62,7 @@ struct AddTaskView: View {
     @State private var repeatCountLimitEnabled: Bool = false
     @State private var repeatCountLimit: Int = 5
 
-    init(projects: [ProjectItem], tasks: [TaskItem], preSelectedProjectId: ProjectItem.ID? = nil, onCreateProject: @escaping (String, String, String?) -> ProjectItem, onAddProjectTag: @escaping (ProjectItem.ID, String) -> Void, onRenameProjectTag: @escaping (ProjectItem.ID, String, String) -> Void = { _,_,_ in }, onDeleteProjectTag: @escaping (ProjectItem.ID, String) -> Void = { _,_ in }, onSaveWithReminder: @escaping (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ reminderAt: Date?) -> Void) {
+    init(projects: [ProjectItem], tasks: [TaskItem], preSelectedProjectId: ProjectItem.ID? = nil, onCreateProject: @escaping (String, String, String?) -> ProjectItem, onAddProjectTag: @escaping (ProjectItem.ID, String) -> Void, onRenameProjectTag: @escaping (ProjectItem.ID, String, String) -> Void = { _,_,_ in }, onDeleteProjectTag: @escaping (ProjectItem.ID, String) -> Void = { _,_ in }, onSaveWithReminder: @escaping (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ dueTime: DateComponents?, _ reminders: [TaskReminder]) -> Void) {
         self.projects = projects
         self.tasks = tasks
         self.onCreateProject = onCreateProject
@@ -74,15 +75,15 @@ struct AddTaskView: View {
     }
 
     // Full initializer including recurrence
-    init(projects: [ProjectItem], tasks: [TaskItem], preSelectedProjectId: ProjectItem.ID? = nil, onCreateProject: @escaping (String, String, String?) -> ProjectItem, onAddProjectTag: @escaping (ProjectItem.ID, String) -> Void, onRenameProjectTag: @escaping (ProjectItem.ID, String, String) -> Void = { _,_,_ in }, onDeleteProjectTag: @escaping (ProjectItem.ID, String) -> Void = { _,_ in }, onSaveFull: @escaping (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ reminderAt: Date?, _ tag: String?, _ recurrence: RecurrenceRule?) -> Void) {
+    init(projects: [ProjectItem], tasks: [TaskItem], preSelectedProjectId: ProjectItem.ID? = nil, onCreateProject: @escaping (String, String, String?) -> ProjectItem, onAddProjectTag: @escaping (ProjectItem.ID, String) -> Void, onRenameProjectTag: @escaping (ProjectItem.ID, String, String) -> Void = { _,_,_ in }, onDeleteProjectTag: @escaping (ProjectItem.ID, String) -> Void = { _,_ in }, onSaveFull: @escaping (_ title: String, _ project: ProjectItem?, _ difficulty: TaskDifficulty, _ resistance: TaskResistance, _ estimated: TaskEstimatedTime, _ dueDate: Date, _ dueTime: DateComponents?, _ reminders: [TaskReminder], _ tag: String?, _ recurrence: RecurrenceRule?) -> Void) {
         self.projects = projects
         self.tasks = tasks
         self.onCreateProject = onCreateProject
         self.onAddProjectTag = onAddProjectTag
         self.onRenameProjectTag = onRenameProjectTag
         self.onDeleteProjectTag = onDeleteProjectTag
-        self.onSave = { title, project, difficulty, resistance, estimated, dueDate, reminderAt in
-            onSaveFull(title, project, difficulty, resistance, estimated, dueDate, reminderAt, nil, nil)
+        self.onSave = { title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders in
+            onSaveFull(title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, nil, nil)
         }
         self.onSaveFull = onSaveFull
         _selectedProjectId = State(initialValue: preSelectedProjectId)
@@ -201,25 +202,26 @@ struct AddTaskView: View {
                                     showCustomDatePicker = false
                                 }
                         }
-                    }
-
-                    // Reminder
-                    Section {
-                        HStack {
-                            Toggle(isOn: $hasReminder) {
-                                Text("Reminder")
-                                    .font(.headline)
-                            }
-                            .onChangeCompat(of: hasReminder) { _, newValue in
-                                if newValue {
-                                    NotificationManager.shared.requestAuthorizationIfNeeded()
-                                }
-                            }
-                        }
-                        if hasReminder {
-                            DatePicker("Time", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                        Toggle("Add due time", isOn: $hasDueTime)
+                        if hasDueTime {
+                            DatePicker("Time", selection: $dueTime, displayedComponents: .hourAndMinute)
                                 .datePickerStyle(.compact)
                         }
+                    }
+
+                    // Reminders
+                    Section {
+                        ReminderListEditor(
+                            reminders: $reminderDrafts,
+                            dueTimeIsSet: hasDueTime,
+                            onFirstReminderAdded: { NotificationManager.shared.requestAuthorizationIfNeeded() }
+                        )
+                    } header: {
+                        Text("Reminders")
+                    } footer: {
+                        Text("Up to three reminders per task.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
 
                     // Repeat (clear copy)
@@ -554,13 +556,14 @@ struct AddTaskView: View {
 
     private func save() {
         let project = selectedProjectId.flatMap { id in projectList.first(where: { $0.id == id }) }
-        let reminderAt = hasReminder ? combineDayAndTime(dueDate, reminderTime) : nil
+        let dueTimeComponents = hasDueTime ? Calendar.current.dateComponents([.hour, .minute], from: dueTime) : nil
+        let reminders = Array(reminderDrafts.prefix(3))
         let recurrence = repeatRule()
         if let full = onSaveFull {
             let tagToUse = (project != nil) ? tagText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty : nil
-            full(title, project, difficulty, resistance, estimated, dueDate, reminderAt, tagToUse, recurrence)
+            full(title, project, difficulty, resistance, estimated, dueDate, dueTimeComponents, reminders, tagToUse, recurrence)
         } else {
-            onSave(title, project, difficulty, resistance, estimated, dueDate, reminderAt)
+            onSave(title, project, difficulty, resistance, estimated, dueDate, dueTimeComponents, reminders)
         }
         dismiss()
     }
@@ -699,16 +702,6 @@ private func nextWeekMonday(from date: Date = Date()) -> Date {
 
 private func nextDays(_ days: Int, from date: Date = Date()) -> Date {
     Calendar.current.date(byAdding: .day, value: days, to: date) ?? date
-}
-
-private func combineDayAndTime(_ day: Date, _ time: Date) -> Date {
-    let cal = Calendar.current
-    let d = TaskItem.defaultDueDate(day)
-    let hm = cal.dateComponents([.hour, .minute], from: time)
-    var comps = cal.dateComponents([.year, .month, .day], from: d)
-    comps.hour = hm.hour
-    comps.minute = hm.minute
-    return cal.date(from: comps) ?? day
 }
 
 private func dateTimeFormatterFactory() -> DateFormatter {

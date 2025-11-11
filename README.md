@@ -68,6 +68,7 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 - [x] Add tags for better filtering  
 - [x] Award points for completed tasks  
 - [x] Add reminders to tasks  
+- [x] Rebuild the reminder editor to support up to three mixed relative/absolute reminders with inline controls  
 - [x] Add repeat options for recurring tasks  
 - [x] Support full markdown notes per task  
 - [x] Improve notes performance  
