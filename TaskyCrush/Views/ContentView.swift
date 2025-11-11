@@ -434,15 +434,16 @@ extension ContentView {
         df.dateStyle = .medium
         df.timeStyle = .none
         var parts: [String] = []
-        // Date label
         parts.append(df.string(from: day))
-        var target: Date = day
-        if let when = t.reminderAt {
-            let tf = DateFormatter()
-            tf.dateStyle = .none
-            tf.timeStyle = .short
-            parts.append("at " + tf.string(from: when))
-            target = when
+        let tf = DateFormatter()
+        tf.dateStyle = .none
+        tf.timeStyle = .short
+        var target: Date = t.dueDateWithTime(using: Calendar.current)
+        if let reminderDate = t.reminders.compactMap({ $0.resolvedDate(for: t) }).sorted().first {
+            parts.append("at " + tf.string(from: reminderDate))
+            target = reminderDate
+        } else if t.dueTimeComponents != nil {
+            parts.append("at " + tf.string(from: target))
         }
         // Relative time (e.g., in 2 hr 5 min)
         let formatter = DateComponentsFormatter()
@@ -482,8 +483,8 @@ extension ContentView {
             },
             onRenameProjectTag: { pid, old, new in viewModel.renameTag(onProject: pid, from: old, to: new) },
             onDeleteProjectTag: { pid, tag in viewModel.deleteTag(onProject: pid, tag: tag) },
-            onSaveFull: { (title: String, project: ProjectItem?, difficulty: TaskDifficulty, resistance: TaskResistance, estimated: TaskEstimatedTime, dueDate: Date, reminderAt: Date?, tag: String?, recurrence: RecurrenceRule?) in
-                viewModel.addTask(title: title, project: project, difficulty: difficulty, resistance: resistance, estimatedTime: estimated, dueDate: dueDate, reminderAt: reminderAt, recurrence: recurrence, tag: tag)
+            onSaveFull: { (title: String, project: ProjectItem?, difficulty: TaskDifficulty, resistance: TaskResistance, estimated: TaskEstimatedTime, dueDate: Date, dueTime: DateComponents?, reminders: [TaskReminder], tag: String?, recurrence: RecurrenceRule?) in
+                viewModel.addTask(title: title, project: project, difficulty: difficulty, resistance: resistance, estimatedTime: estimated, dueDate: dueDate, dueTime: dueTime, reminders: reminders, recurrence: recurrence, tag: tag)
             }
         )
     }
@@ -584,7 +585,7 @@ extension ContentView {
             },
             onRenameProjectTag: { pid, old, new in viewModel.renameTag(onProject: pid, from: old, to: new) },
             onDeleteProjectTag: { pid, tag in viewModel.deleteTag(onProject: pid, tag: tag) },
-            onSave: { title, project, difficulty, resistance, estimated, dueDate, reminderAt, recurrence, tag in
+            onSave: { title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, recurrence, tag in
                 viewModel.updateTask(
                     id: task.id,
                     title: title,
@@ -593,7 +594,8 @@ extension ContentView {
                     resistance: resistance,
                     estimatedTime: estimated,
                     dueDate: dueDate,
-                    reminderAt: reminderAt,
+                    dueTime: dueTime,
+                    reminders: reminders,
                     recurrence: recurrence,
                     tag: tag
                 )
@@ -878,7 +880,7 @@ extension ContentView {
                 selectedFilter = .project(project.id)
                 showingCompletedSheet = false
             },
-            onUpdateTask: { original, title, project, difficulty, resistance, estimated, dueDate, reminderAt, recurrence, tag in
+            onUpdateTask: { original, title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, recurrence, tag in
                 viewModel.updateTask(
                     id: original.id,
                     title: title,
@@ -887,7 +889,8 @@ extension ContentView {
                     resistance: resistance,
                     estimatedTime: estimated,
                     dueDate: dueDate,
-                    reminderAt: reminderAt,
+                    dueTime: dueTime,
+                    reminders: reminders,
                     recurrence: recurrence,
                     tag: tag
                 )

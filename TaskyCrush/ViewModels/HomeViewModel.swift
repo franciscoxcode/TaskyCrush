@@ -80,10 +80,6 @@ final class HomeViewModel: ObservableObject {
                         next = adjustByScopeIfNeeded(next, scope: rule.scope)
                         if next != tasks[i].dueDate {
                             tasks[i].dueDate = next
-                            // Align reminder to the same time (if any)
-                            if let when = tasks[i].reminderAt {
-                                tasks[i].reminderAt = alignReminderTime(toDay: next, from: when)
-                            }
                             changed = true
                         }
                     }
@@ -91,9 +87,6 @@ final class HomeViewModel: ObservableObject {
                     // Keep it visible today until completed
                     if due < today {
                         tasks[i].dueDate = today
-                        if let when = tasks[i].reminderAt {
-                            tasks[i].reminderAt = alignReminderTime(toDay: today, from: when)
-                        }
                         changed = true
                     }
                 }
@@ -136,15 +129,6 @@ final class HomeViewModel: ObservableObject {
                 if w == 7 { return d }
             }
         }
-    }
-
-    private func alignReminderTime(toDay day: Date, from timeSource: Date) -> Date {
-        let cal = Calendar.current
-        let hm = cal.dateComponents([.hour, .minute], from: timeSource)
-        var comps = cal.dateComponents([.year, .month, .day], from: TaskItem.defaultDueDate(day))
-        comps.hour = hm.hour
-        comps.minute = hm.minute
-        return cal.date(from: comps) ?? day
     }
 
     @discardableResult
@@ -288,17 +272,34 @@ final class HomeViewModel: ObservableObject {
         resistance: TaskResistance = .low,
         estimatedTime: TaskEstimatedTime = .short,
         dueDate: Date = TaskItem.defaultDueDate(),
-        reminderAt: Date? = nil,
+        dueTime: DateComponents? = nil,
+        reminders: [TaskReminder] = [],
         recurrence: RecurrenceRule? = nil,
         tag: String? = nil
     ) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let finalTag: String? = (project != nil) ? (tag?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty) : nil
-        let task = TaskItem(title: trimmed, isDone: false, project: project, difficulty: difficulty, resistance: resistance, estimatedTime: estimatedTime, dueDate: dueDate, reminderAt: reminderAt, recurrence: recurrence, noteMarkdown: nil, noteUpdatedAt: nil, tag: finalTag)
+        let normalizedDay = TaskItem.defaultDueDate(dueDate)
+        let trimmedReminders = Array(reminders.prefix(3))
+        let task = TaskItem(
+            title: trimmed,
+            isDone: false,
+            project: project,
+            difficulty: difficulty,
+            resistance: resistance,
+            estimatedTime: estimatedTime,
+            dueDate: normalizedDay,
+            dueTimeComponents: dueTime,
+            reminders: trimmedReminders,
+            recurrence: recurrence,
+            noteMarkdown: nil,
+            noteUpdatedAt: nil,
+            tag: finalTag
+        )
         tasks.append(task)
         saveTasks()
-        if let _ = task.reminderAt { NotificationManager.shared.scheduleReminder(for: task) }
+        if task.hasReminders { NotificationManager.shared.scheduleReminders(for: task) }
     }
 
     func updateTask(
@@ -309,11 +310,13 @@ final class HomeViewModel: ObservableObject {
         resistance: TaskResistance,
         estimatedTime: TaskEstimatedTime,
         dueDate: Date,
-        reminderAt: Date?,
+        dueTime: DateComponents?,
+        reminders: [TaskReminder],
         recurrence: RecurrenceRule?,
         tag: String? = nil
     ) {
         guard let idx = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let previousTask = tasks[idx]
         var current = tasks[idx]
         let previousProjectId = current.project?.id
         current.title = title
@@ -329,14 +332,15 @@ final class HomeViewModel: ObservableObject {
         current.difficulty = difficulty
         current.resistance = resistance
         current.estimatedTime = estimatedTime
-        current.dueDate = dueDate
+        current.dueDate = TaskItem.defaultDueDate(dueDate)
+        current.dueTimeComponents = dueTime
+        current.reminders = Array(reminders.prefix(3))
         current.recurrence = recurrence
-        current.reminderAt = reminderAt
         tasks[idx] = current
         saveTasks()
         // Reschedule notification
-        NotificationManager.shared.cancelReminder(for: id)
-        if let _ = current.reminderAt, !current.isDone { NotificationManager.shared.scheduleReminder(for: current) }
+        NotificationManager.shared.cancelReminders(for: previousTask)
+        if current.hasReminders && !current.isDone { NotificationManager.shared.scheduleReminders(for: current) }
     }
 
     // Update or create the markdown note attached to a task
@@ -350,10 +354,12 @@ final class HomeViewModel: ObservableObject {
 
     func toggleTaskDone(id: UUID) {
         guard let idx = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let reminderTemplates = tasks[idx].reminders
+        let originalTask = tasks[idx]
         tasks[idx].isDone.toggle()
         if tasks[idx].isDone {
             tasks[idx].completedAt = Date()
-            NotificationManager.shared.cancelReminder(for: id)
+            NotificationManager.shared.cancelReminders(for: originalTask)
             // Handle recurrence: generate next occurrence if applicable and within limit
             if let rule = tasks[idx].recurrence {
                 let doneCount = rule.occurrencesDone + 1
@@ -361,9 +367,10 @@ final class HomeViewModel: ObservableObject {
                     // Do not create a next one; keep history only
                 } else {
                     // Propose next occurrence task (do not append yet)
-                    let nextDT = nextDateTimeAfterCompletion(for: tasks[idx], rule: rule)
+                    let nextDay = nextDateAfterCompletion(for: tasks[idx], rule: rule)
                     var nextRecurrence = rule
                     nextRecurrence.occurrencesDone = doneCount
+                    let reminders = Array(reminderTemplates.compactMap { $0.copyForNextOccurrence() }.prefix(3))
                     let proposal = TaskItem(
                         title: tasks[idx].title,
                         isDone: false,
@@ -371,8 +378,9 @@ final class HomeViewModel: ObservableObject {
                         difficulty: tasks[idx].difficulty,
                         resistance: tasks[idx].resistance,
                         estimatedTime: tasks[idx].estimatedTime,
-                        dueDate: TaskItem.defaultDueDate(nextDT),
-                        reminderAt: tasks[idx].reminderAt != nil ? nextDT : nil,
+                        dueDate: TaskItem.defaultDueDate(nextDay),
+                        dueTimeComponents: tasks[idx].dueTimeComponents,
+                        reminders: reminders,
                         recurrence: nextRecurrence
                     )
                     proposedNextOccurrence = proposal
@@ -386,20 +394,16 @@ final class HomeViewModel: ObservableObject {
             let today = TaskItem.defaultDueDate()
             if TaskItem.defaultDueDate(tasks[idx].dueDate) < today {
                 tasks[idx].dueDate = today
-                // If there's a reminder, move it to today's date at the same time
-                if let when = tasks[idx].reminderAt {
-                    tasks[idx].reminderAt = alignReminder(when, toDay: today)
-                }
             }
             // Reschedule reminder if present and in the future
-            NotificationManager.shared.cancelReminder(for: id)
-            if let _ = tasks[idx].reminderAt { NotificationManager.shared.scheduleReminder(for: tasks[idx]) }
+            NotificationManager.shared.cancelReminders(for: originalTask)
+            if tasks[idx].hasReminders { NotificationManager.shared.scheduleReminders(for: tasks[idx]) }
         }
         saveTasks()
     }
 
-    // Compute next datetime for the next occurrence after completion
-    private func nextDateTimeAfterCompletion(for task: TaskItem, rule: RecurrenceRule) -> Date {
+    // Compute next due day for the next occurrence after completion
+    private func nextDateAfterCompletion(for task: TaskItem, rule: RecurrenceRule) -> Date {
         let now = task.completedAt ?? Date()
         switch rule.unit {
         case .minutes:
@@ -410,9 +414,6 @@ final class HomeViewModel: ObservableObject {
             // For >= day, compute next day from appropriate base then align reminder time if present
             let baseDay: Date = (rule.basis == .completion) ? TaskItem.defaultDueDate(now) : TaskItem.defaultDueDate(task.dueDate)
             let nextDay = nextOccurrenceDay(from: baseDay, rule: rule)
-            if let when = task.reminderAt {
-                return alignReminderTime(toDay: nextDay, from: when)
-            }
             return nextDay
         }
     }
@@ -423,7 +424,7 @@ final class HomeViewModel: ObservableObject {
         let toCreate = proposedNextOccurrence ?? proposed
         tasks.append(toCreate)
         saveTasks()
-        if toCreate.reminderAt != nil { NotificationManager.shared.scheduleReminder(for: toCreate) }
+        if toCreate.hasReminders { NotificationManager.shared.scheduleReminders(for: toCreate) }
         proposedNextOccurrence = nil
     }
 
@@ -431,18 +432,17 @@ final class HomeViewModel: ObservableObject {
         guard let idx = tasks.firstIndex(where: { $0.id == id }) else { return }
         let newDay = TaskItem.defaultDueDate(dueDate)
         tasks[idx].dueDate = newDay
-        if let when = tasks[idx].reminderAt {
-            tasks[idx].reminderAt = alignReminder(when, toDay: newDay)
-        }
         saveTasks()
         // Reschedule reminder if present
-        NotificationManager.shared.cancelReminder(for: id)
-        if let _ = tasks[idx].reminderAt, !tasks[idx].isDone { NotificationManager.shared.scheduleReminder(for: tasks[idx]) }
+        NotificationManager.shared.cancelReminders(for: tasks[idx])
+        if tasks[idx].hasReminders && !tasks[idx].isDone { NotificationManager.shared.scheduleReminders(for: tasks[idx]) }
     }
 
     func deleteTask(id: UUID) {
+        if let task = tasks.first(where: { $0.id == id }) {
+            NotificationManager.shared.cancelReminders(for: task)
+        }
         tasks.removeAll { $0.id == id }
-        NotificationManager.shared.cancelReminder(for: id)
         saveTasks()
     }
 
@@ -472,7 +472,7 @@ final class HomeViewModel: ObservableObject {
         let times: [TaskEstimatedTime] = [.short, .medium, .long]
 
         func add(_ title: String, _ project: ProjectItem?, _ due: Date, _ di: Int, _ ri: Int, _ ti: Int) {
-            addTask(title: title, project: project, difficulty: diffs[di % diffs.count], resistance: ress[ri % ress.count], estimatedTime: times[ti % times.count], dueDate: due, reminderAt: nil)
+            addTask(title: title, project: project, difficulty: diffs[di % diffs.count], resistance: ress[ri % ress.count], estimatedTime: times[ti % times.count], dueDate: due, dueTime: nil, reminders: [])
         }
 
         // Work: mix of today/tomorrow
@@ -557,9 +557,8 @@ final class HomeViewModel: ObservableObject {
             let decoded = try JSONDecoder().decode([TaskItem].self, from: data)
             self.tasks = decoded
             // Restore/schedule pending reminders for future dates
-            for t in tasks where t.reminderAt != nil && !(t.isDone) {
-                NotificationManager.shared.cancelReminder(for: t.id)
-                NotificationManager.shared.scheduleReminder(for: t)
+            for t in tasks where t.hasReminders && !(t.isDone) {
+                NotificationManager.shared.scheduleReminders(for: t)
             }
         } catch {
             print("Failed to load tasks: \(error)")
@@ -578,15 +577,6 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Reminder helpers
-    private func alignReminder(_ reminder: Date, toDay day: Date) -> Date {
-        let cal = Calendar.current
-        let hm = cal.dateComponents([.hour, .minute], from: reminder)
-        var comps = cal.dateComponents([.year, .month, .day], from: day)
-        comps.hour = hm.hour
-        comps.minute = hm.minute
-        return cal.date(from: comps) ?? day
-    }
 }
 
 // MARK: - Date helpers for seeding
