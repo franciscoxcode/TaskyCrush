@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class HomeViewModel: ObservableObject {
     @Published var tasks: [TaskItem] = []
     @Published var projects: [ProjectItem] = []
@@ -265,7 +266,7 @@ final class HomeViewModel: ObservableObject {
         saveTasks()
     }
 
-    func addTask(
+    @MainActor func addTask(
         title: String,
         project: ProjectItem?,
         difficulty: TaskDifficulty = .easy,
@@ -302,7 +303,7 @@ final class HomeViewModel: ObservableObject {
         if task.hasReminders { NotificationManager.shared.scheduleReminders(for: task) }
     }
 
-    func updateTask(
+    @MainActor func updateTask(
         id: UUID,
         title: String,
         project: ProjectItem?,
@@ -352,7 +353,7 @@ final class HomeViewModel: ObservableObject {
         saveTasks()
     }
 
-    func toggleTaskDone(id: UUID) {
+    @MainActor func toggleTaskDone(id: UUID) {
         guard let idx = tasks.firstIndex(where: { $0.id == id }) else { return }
         let reminderTemplates = tasks[idx].reminders
         let originalTask = tasks[idx]
@@ -419,7 +420,7 @@ final class HomeViewModel: ObservableObject {
     }
 
     // Confirm and create the proposed next occurrence (called from UI Accept/Edit)
-    func confirmNextOccurrence(_ proposed: TaskItem) {
+    @MainActor func confirmNextOccurrence(_ proposed: TaskItem) {
         // Ensure we create the latest proposed if available
         let toCreate = proposedNextOccurrence ?? proposed
         tasks.append(toCreate)
@@ -428,7 +429,7 @@ final class HomeViewModel: ObservableObject {
         proposedNextOccurrence = nil
     }
 
-    func setTaskDueDate(id: UUID, dueDate: Date) {
+    @MainActor func setTaskDueDate(id: UUID, dueDate: Date) {
         guard let idx = tasks.firstIndex(where: { $0.id == id }) else { return }
         let newDay = TaskItem.defaultDueDate(dueDate)
         tasks[idx].dueDate = newDay
@@ -438,7 +439,7 @@ final class HomeViewModel: ObservableObject {
         if tasks[idx].hasReminders && !tasks[idx].isDone { NotificationManager.shared.scheduleReminders(for: tasks[idx]) }
     }
 
-    func deleteTask(id: UUID) {
+    @MainActor func deleteTask(id: UUID) {
         if let task = tasks.first(where: { $0.id == id }) {
             NotificationManager.shared.cancelReminders(for: task)
         }
@@ -549,7 +550,7 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    private func loadTasks() {
+    @MainActor private func loadTasks() {
         do {
             let url = tasksFileURL
             guard FileManager.default.fileExists(atPath: url.path) else { return }

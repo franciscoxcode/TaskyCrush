@@ -1,7 +1,8 @@
 import Foundation
 import UserNotifications
 
-final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
+@MainActor
+final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
     private override init() { super.init() }
 

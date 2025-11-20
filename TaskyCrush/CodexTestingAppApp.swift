@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import SwiftData
 import UserNotifications
 
 @main
 struct CodexTestingAppApp: App {
+    private let dataController = DataController.shared
+
     init() {
         // Configure notifications delegate early
         NotificationManager.shared.configure()
@@ -19,5 +22,6 @@ struct CodexTestingAppApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(dataController.container)
     }
 }

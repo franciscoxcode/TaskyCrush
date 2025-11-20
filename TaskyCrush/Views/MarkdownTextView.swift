@@ -17,7 +17,7 @@ final class MarkdownEditorController: ObservableObject {
     private static let reItalic = try! NSRegularExpression(pattern: #"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)"#, options: [])
     private static let reChecklist = try! NSRegularExpression(pattern: #"(?m)^- \[ (?:\]|x)\]\s"#, options: [])
 
-    func wrapSelection(with token: String) {
+    @MainActor func wrapSelection(with token: String) {
         guard let tv = textView else { return }
         let range = tv.selectedRange
         let ns = tv.text as NSString? ?? "" as NSString
@@ -35,7 +35,7 @@ final class MarkdownEditorController: ObservableObject {
         sendEditingChanged()
     }
 
-    func insertPrefixAtLineStart(_ prefix: String) {
+    @MainActor func insertPrefixAtLineStart(_ prefix: String) {
         guard let tv = textView else { return }
         let r = tv.selectedRange
         guard let lineRange = tv.currentLineRange() else { return }
@@ -51,7 +51,7 @@ final class MarkdownEditorController: ObservableObject {
         sendEditingChanged()
     }
 
-    func insertPrefixForSelectedLines(_ prefix: String) {
+    @MainActor func insertPrefixForSelectedLines(_ prefix: String) {
         guard let tv = textView else { return }
         guard let block = tv.selectedLinesRange() else { return }
         let ns = tv.text as NSString? ?? "" as NSString
@@ -67,7 +67,7 @@ final class MarkdownEditorController: ObservableObject {
         sendEditingChanged()
     }
 
-    func toggleChecklist() {
+    @MainActor func toggleChecklist() {
         guard let tv = textView else { return }
         guard let block = tv.selectedLinesRange() else { return }
         let ns = tv.text as NSString? ?? "" as NSString
@@ -83,7 +83,7 @@ final class MarkdownEditorController: ObservableObject {
         sendEditingChanged()
     }
 
-    func heading(_ level: Int) {
+    @MainActor func heading(_ level: Int) {
         guard let tv = textView else { return }
         guard let line = tv.currentLineRange() else { return }
         let ns = tv.text as NSString? ?? "" as NSString
@@ -106,7 +106,7 @@ final class MarkdownEditorController: ObservableObject {
     }
 
     // MARK: - Sticky typing modes
-    func toggleMode(_ mode: Mode) {
+    @MainActor func toggleMode(_ mode: Mode) {
         guard let tv = textView else { return }
         if activeModes.contains(mode) {
             // Deactivate: wrap from anchor to caret
@@ -314,7 +314,7 @@ final class MarkdownEditorController: ObservableObject {
     }
 
     // MARK: - Toggle checkbox state by tap
-    func toggleCheckbox(atCharacter offset: Int) {
+    @MainActor func toggleCheckbox(atCharacter offset: Int) {
         guard let tv = textView else { return }
         let ns = tv.text as NSString? ?? "" as NSString
         let lineRange = ns.lineRange(for: NSRange(location: min(offset, ns.length), length: 0))
@@ -335,7 +335,7 @@ final class MarkdownEditorController: ObservableObject {
     }
 
     // MARK: - Extra actions: quote, code, link
-    func toggleBlockQuote() {
+    @MainActor func toggleBlockQuote() {
         guard let tv = textView else { return }
         guard let block = tv.selectedLinesRange() else { return }
         let ns = tv.text as NSString? ?? "" as NSString
@@ -351,9 +351,9 @@ final class MarkdownEditorController: ObservableObject {
         sendEditingChanged()
     }
 
-    func wrapInlineCode() { wrapSelection(with: "`") }
+    @MainActor func wrapInlineCode() { wrapSelection(with: "`") }
 
-    func wrapLink() {
+    @MainActor func wrapLink() {
         guard let tv = textView else { return }
         let range = tv.selectedRange
         let ns = tv.text as NSString? ?? "" as NSString
@@ -383,7 +383,7 @@ final class MarkdownEditorController: ObservableObject {
     }
 
     // MARK: - Ordered list toggle
-    func toggleOrderedList() {
+    @MainActor func toggleOrderedList() {
         guard let tv = textView else { return }
         guard let block = tv.selectedLinesRange() else { return }
         let ns = tv.text as NSString? ?? "" as NSString
@@ -425,7 +425,7 @@ final class MarkdownEditorController: ObservableObject {
         return linesBefore * prefix.count
     }
 
-    private func sendEditingChanged() {
+    @MainActor private func sendEditingChanged() {
         // Manually notify bound text update
         textView?.delegate?.textViewDidChange?(textView!)
     }
@@ -468,6 +468,7 @@ private extension UITextView {
     }
 }
 
+@MainActor
 struct MarkdownTextView: UIViewRepresentable {
     @Binding var text: String
     var controller: MarkdownEditorController
