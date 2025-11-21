@@ -3,13 +3,17 @@ import SwiftData
 
 @Model
 final class ProjectRecord {
-    @Attribute(.unique) private(set) var id: UUID
-    var name: String
-    var emoji: String
+    var id: UUID = Foundation.UUID()
+    var name: String = ""
+    var emoji: String = "📁"
     var colorName: String?
     var sortOrder: Int?
-    var tags: [String]
-    @Relationship(deleteRule: .cascade, inverse: \TaskRecord.project) var tasks: [TaskRecord]
+    @Attribute(.externalStorage) private var encodedTags: Data? = nil
+
+    var tags: [String] {
+        get { decode([String].self, from: encodedTags) ?? [] }
+        set { encodedTags = encode(newValue) }
+    }
 
     init(
         id: UUID = UUID(),
@@ -24,26 +28,26 @@ final class ProjectRecord {
         self.emoji = emoji
         self.colorName = colorName
         self.sortOrder = sortOrder
-        self.tags = tags
-        self.tasks = []
+        self.encodedTags = encode(tags)
     }
 }
 
 @Model
 final class TaskRecord {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var isDone: Bool
+    var id: UUID = Foundation.UUID()
+    var title: String = ""
+    var isDone: Bool = false
     var completedAt: Date?
-    @Relationship var project: ProjectRecord?
+    var projectId: UUID?
     var tag: String?
-    var difficulty: TaskDifficulty
-    var resistance: TaskResistance
-    var estimatedTime: TaskEstimatedTime
-    var dueDate: Date
-    @Attribute(.externalStorage) private var encodedDueTimeComponents: Data?
-    @Attribute(.externalStorage) private var encodedRecurrence: Data?
-    @Attribute(.externalStorage) private var encodedReminders: Data?
+    var difficulty: TaskDifficulty = TaskDifficulty.easy
+    var resistance: TaskResistance = TaskResistance.low
+    var estimatedTime: TaskEstimatedTime = TaskEstimatedTime.short
+    var dueDate: Date = Foundation.Date()
+    @Attribute(.externalStorage) private var encodedDueTimeComponents: Data? = nil
+    @Attribute(.externalStorage) private var encodedRecurrence: Data? = nil
+    @Attribute(.externalStorage) private var encodedReminders: Data? = nil
+    @Attribute(.externalStorage) private var encodedProjectSnapshot: Data? = nil
     var noteMarkdown: String?
     var noteUpdatedAt: Date?
 
@@ -74,11 +78,16 @@ final class TaskRecord {
         set { remindersBackingStore = newValue }
     }
 
+    var projectSnapshot: ProjectItem? {
+        get { decode(ProjectItem.self, from: encodedProjectSnapshot) }
+        set { encodedProjectSnapshot = encode(newValue) }
+    }
+
     init(
         id: UUID = UUID(),
         title: String,
         isDone: Bool = false,
-        project: ProjectRecord? = nil,
+        projectId: UUID? = nil,
         tag: String? = nil,
         difficulty: TaskDifficulty = .easy,
         resistance: TaskResistance = .low,
@@ -88,13 +97,14 @@ final class TaskRecord {
         recurrence: RecurrenceRule? = nil,
         noteMarkdown: String? = nil,
         noteUpdatedAt: Date? = nil,
-        reminders: [TaskReminder] = []
+        reminders: [TaskReminder] = [],
+        projectSnapshot: ProjectItem? = nil
     ) {
         self.id = id
         self.title = title
         self.isDone = isDone
         self.completedAt = nil
-        self.project = project
+        self.projectId = projectId
         self.tag = tag
         self.difficulty = difficulty
         self.resistance = resistance
@@ -105,6 +115,7 @@ final class TaskRecord {
         self.encodedReminders = encode(reminders)
         self.noteMarkdown = noteMarkdown
         self.noteUpdatedAt = noteUpdatedAt
+        self.projectSnapshot = projectSnapshot
     }
 }
 

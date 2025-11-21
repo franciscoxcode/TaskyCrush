@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 final class MarkdownEditorController: ObservableObject {
     weak var textView: UITextView?
     // Stage 3: sticky typing modes

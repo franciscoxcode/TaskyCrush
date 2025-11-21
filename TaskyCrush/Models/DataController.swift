@@ -20,14 +20,14 @@ final class DataController {
                 configurations: configuration
             )
         } catch {
-            assertionFailure("Cloud-backed container failed: \(error.localizedDescription). Falling back to local store.")
+            print("[DataController] Cloud-backed container failed: \(error.localizedDescription). Falling back to local store.")
             do {
                 container = try ModelContainer(
                     for: ProjectRecord.self,
                     TaskRecord.self
                 )
             } catch {
-                fatalError("Failed to create SwiftData container even for local store: \(error.localizedDescription)")
+                fatalError("Failed to create SwiftData container even for local store: \(error.localizedDescription)\n\(String(describing: error))")
             }
         }
     }

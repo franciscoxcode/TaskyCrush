@@ -8,12 +8,15 @@ final class HomeViewModel: ObservableObject {
     @Published var lastGeneratedOccurrence: TaskItem? = nil
     private var proposedNextOccurrence: TaskItem? = nil
     private var cancellables: Set<AnyCancellable> = []
+    private let dataStore: TaskDataStore
     // Notify UI when a next occurrence is generated
     let nextOccurrence = PassthroughSubject<TaskItem, Never>()
 
-    init() {
+    init(dataStore: TaskDataStore = TaskDataStore(context: DataController.shared.container.mainContext)) {
+        self.dataStore = dataStore
         loadProjects()
         loadTasks()
+        migrateLegacyStoreIfNeeded()
         // Migration: ensure completedAt is set for done tasks
         // Migration: ensure completedAt is set for done tasks
         var mutated = false
@@ -514,9 +517,6 @@ final class HomeViewModel: ObservableObject {
         // Clear in-memory
         tasks.removeAll()
         projects.removeAll()
-        // Remove persisted files
-        try? FileManager.default.removeItem(at: tasksFileURL)
-        try? FileManager.default.removeItem(at: projectsFileURL)
         // Reseed
         seedSampleData()
         // Persist immediately
@@ -525,17 +525,9 @@ final class HomeViewModel: ObservableObject {
     }
 
     // MARK: - Persistence
-    private var documentsDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-    }
-
-    private var tasksFileURL: URL { documentsDirectory.appendingPathComponent("tasks.json") }
-    private var projectsFileURL: URL { documentsDirectory.appendingPathComponent("projects.json") }
-
     private func saveTasks() {
         do {
-            let data = try JSONEncoder().encode(tasks)
-            try data.write(to: tasksFileURL, options: [.atomic])
+            try dataStore.saveTasks(tasks)
         } catch {
             print("Failed to save tasks: \(error)")
         }
@@ -543,8 +535,7 @@ final class HomeViewModel: ObservableObject {
 
     private func saveProjects() {
         do {
-            let data = try JSONEncoder().encode(projects)
-            try data.write(to: projectsFileURL, options: [.atomic])
+            try dataStore.saveProjects(projects)
         } catch {
             print("Failed to save projects: \(error)")
         }
@@ -552,12 +543,7 @@ final class HomeViewModel: ObservableObject {
 
     @MainActor private func loadTasks() {
         do {
-            let url = tasksFileURL
-            guard FileManager.default.fileExists(atPath: url.path) else { return }
-            let data = try Data(contentsOf: url)
-            let decoded = try JSONDecoder().decode([TaskItem].self, from: data)
-            self.tasks = decoded
-            // Restore/schedule pending reminders for future dates
+            self.tasks = try dataStore.fetchTasks()
             for t in tasks where t.hasReminders && !(t.isDone) {
                 NotificationManager.shared.scheduleReminders(for: t)
             }
@@ -568,13 +554,67 @@ final class HomeViewModel: ObservableObject {
 
     private func loadProjects() {
         do {
-            let url = projectsFileURL
-            guard FileManager.default.fileExists(atPath: url.path) else { return }
-            let data = try Data(contentsOf: url)
-            let decoded = try JSONDecoder().decode([ProjectItem].self, from: data)
-            self.projects = decoded
+            self.projects = try dataStore.fetchProjects()
         } catch {
             print("Failed to load projects: \(error)")
+        }
+    }
+
+    private func migrateLegacyStoreIfNeeded() {
+        var importedProjects = false
+        if projects.isEmpty, let legacyProjects = decodeLegacyProjects() {
+            self.projects = legacyProjects
+            importedProjects = true
+        }
+
+        var importedTasks = false
+        if tasks.isEmpty, let legacyTasks = decodeLegacyTasks() {
+            self.tasks = legacyTasks
+            importedTasks = true
+            for t in tasks where t.hasReminders && !(t.isDone) {
+                NotificationManager.shared.scheduleReminders(for: t)
+            }
+        }
+
+        if importedProjects {
+            saveProjects()
+            try? FileManager.default.removeItem(at: legacyProjectsFileURL)
+        }
+
+        if importedTasks {
+            saveTasks()
+            try? FileManager.default.removeItem(at: legacyTasksFileURL)
+        }
+    }
+
+    private var legacyDocumentsDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
+
+    private var legacyTasksFileURL: URL { legacyDocumentsDirectory.appendingPathComponent("tasks.json") }
+    private var legacyProjectsFileURL: URL { legacyDocumentsDirectory.appendingPathComponent("projects.json") }
+
+    private func decodeLegacyTasks() -> [TaskItem]? {
+        let url = legacyTasksFileURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode([TaskItem].self, from: data)
+        } catch {
+            print("Failed to decode legacy tasks: \(error)")
+            return nil
+        }
+    }
+
+    private func decodeLegacyProjects() -> [ProjectItem]? {
+        let url = legacyProjectsFileURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode([ProjectItem].self, from: data)
+        } catch {
+            print("Failed to decode legacy projects: \(error)")
+            return nil
         }
     }
 

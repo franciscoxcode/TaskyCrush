@@ -23,6 +23,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Filter your day by inbox or project and zero in on today, tomorrow, the weekend, or any custom date while overdue tasks automatically roll forward and recurring items schedule their next appearance.
 - Stay motivated with a live coin badge, instant point rewards on completion, and a full completed-history sheet that lets you reschedule, edit, and note-take without leaving the flow.
 - Work quickly through inline sheets for adding tasks, managing projects, picking emojis, and opening the markdown note editor right from the main screen.
+- Keep every device in sync with a SwiftData model container backed by CloudKit, while still working offline thanks to an automatic local-store fallback.
 ---
 
 ## Stack Used
@@ -31,7 +32,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Combine-powered observable model that publishes task/project changes and persists them automatically.
 - A custom UIKit-backed markdown editor wrapped for SwiftUI to handle rich note-taking features.
 - Local notification tooling wired up at launch to request permission, schedule reminders, and surface alerts in the foreground.
-- File-based JSON persistence for tasks and projects plus UserDefaults tracking for the user’s point total, keeping progress intact between launches.
+- SwiftData model container configured for CloudKit sync, with automatic fallback to a local SQLite store and a one-time JSON migration path for legacy installs.
 
 ---
 
@@ -44,8 +45,11 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 ```bash
 /Assets.xcassets                 # App icon and accent color asset catalog for the UI chrome
 /CodexTestingAppApp.swift        # SwiftUI app entry that wires the notification manager and launches the main scene
-/Models/TaskItem.swift           # Codable task model covering status, recurrence, reminders, and markdown notes
-/Models/ProjectItem.swift        # Project “story” data with emoji, accent color, ordering, and tag catalog metadata
+/Models/TaskItem.swift           # Codable task DTO covering status, recurrence, reminders, and markdown notes
+/Models/ProjectItem.swift        # Project “story” DTO with emoji, accent color, ordering, and tag catalog metadata
+/Models/SwiftDataModels.swift    # @Model-backed TaskRecord/ProjectRecord definitions for SwiftData + CloudKit
+/Models/DataController.swift     # Singleton that builds the SwiftData container with CloudKit + local fallbacks
+/Models/TaskDataStore.swift      # Persistence facade that fetches/saves models through SwiftData and handles migration
 /Utils/RecurrenceEngine.swift    # Date engine that advances repeating tasks with weekday/weekend scope rules
 /Utils/NotificationManager.swift # Singleton for requesting permission and scheduling or cancelling local reminders
 /ViewModels/HomeViewModel.swift  # Observable store loading/persisting data, rolling overdue tasks, and managing points/tags
@@ -79,7 +83,7 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 - [x] Autofocus the add-task title field when opening the floating button sheet  
 - [ ] Rearrange tasks via long press  
 - [ ] Add due time to tasks
-- [ ] Implement CloudKit for database and sync
+- [x] Implement SwiftData + CloudKit database and sync fallback
 - [ ] Create widget to create and check tasks on the go
 - [ ] Add quick actions with Siri Shortcuts
 - [ ] Create MacOS companion app
@@ -99,15 +103,17 @@ To run this app locally:
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/your-username/FavoriteCharacters.git
+git clone https://github.com/franciscoxcode/TaskyCrush.git
 ```
 
 2. Open the project in Xcode:
   ```bash
-  open FavoriteCharacters.xcodeproj
+  open TaskyCrush/TaskyCrush.xcodeproj
   ```
 
-3. Build and run the app on a simulator or real device.
+3. In the **Signing & Capabilities** tab, select your team, enable the `iCloud` capability, and make sure the container `iCloud.com.franciscocasillas.TaskyCrush` is checked.
+
+4. Build and run the app on a simulator or real device (sign in to the same iCloud account on each device to test sync).
 
 ---
 
