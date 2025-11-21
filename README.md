@@ -23,6 +23,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Filter your day by inbox or project and zero in on today, tomorrow, the weekend, or any custom date while overdue tasks automatically roll forward and recurring items schedule their next appearance.
 - Stay motivated with a live coin badge, instant point rewards on completion, and a full completed-history sheet that lets you reschedule, edit, and note-take without leaving the flow.
 - Work quickly through inline sheets for adding tasks, managing projects, picking emojis, and opening the markdown note editor right from the main screen.
+- Mirror the same “story” style on macOS with a companion target that renders the horizontal project chips and a + sheet to spin up new emoji projects on desktop.
 - Keep every device in sync with a SwiftData model container backed by CloudKit, while still working offline thanks to an automatic local-store fallback.
 ---
 
@@ -86,7 +87,7 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 - [x] Implement SwiftData + CloudKit database and sync fallback
 - [ ] Create widget to create and check tasks on the go
 - [ ] Add quick actions with Siri Shortcuts
-- [ ] Create MacOS companion app
+- [x] Kick off macOS companion target with the story HStack + add-project sheet
 
 ---
 
@@ -114,6 +115,12 @@ git clone https://github.com/franciscoxcode/TaskyCrush.git
 3. In the **Signing & Capabilities** tab, select your team, enable the `iCloud` capability, and make sure the container `iCloud.com.franciscocasillas.TaskyCrush` is checked.
 
 4. Build and run the app on a simulator or real device (sign in to the same iCloud account on each device to test sync).
+
+### macOS Target
+
+- Select the `TaskyCrushMac` scheme to launch the macOS companion window.
+- You’ll see the horizontal project stories row with the shared visual styling and the `＋` button to create placeholder projects with the new sheet.
+- This target currently keeps its project list in-memory, making it perfect for previewing desktop UI without affecting the iOS data store.
 
 ---
 

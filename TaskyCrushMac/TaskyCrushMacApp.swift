@@ -4,8 +4,7 @@ import SwiftUI
 struct TaskyCrushMacApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("Hello, TaskyCrush for macOS!")
-                .frame(minWidth: 320, minHeight: 200)
+            MacHomeView()
         }
     }
 }
