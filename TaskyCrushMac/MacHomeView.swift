@@ -54,8 +54,6 @@ struct MacHomeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            header
-
             projectsRow
 
             Divider()
@@ -88,29 +86,8 @@ struct MacHomeView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("TaskyCrush")
-                .font(.largeTitle)
-                .bold()
-            (
-                Text("Tus datos se guardan localmente y se sincronizan con iCloud (") +
-                Text(DataController.cloudKitIdentifier)
-                    .font(.system(.body, design: .monospaced)) +
-                Text(")")
-            )
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-        }
-    }
-
     private var projectsRow: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Tus proyectos")
-                .font(.title2)
-                .bold()
-                .padding(.horizontal, 4)
-
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
                     StoryItem(
@@ -209,7 +186,7 @@ struct MacHomeView: View {
     private var sectionTitle: String {
         switch selection {
         case .all:
-            return "Todas tus tareas"
+            return "Tasks"
         case .inbox:
             return "Inbox"
         case let .project(id):
@@ -321,18 +298,17 @@ private struct MacTaskRow: View {
                 }
 
                 if let project {
-                    Label(project.name, systemImage: "folder")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Label {
+                        Text(project.name)
+                    } icon: {
+                        Text(project.emoji)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
             }
 
             Spacer()
-
-            if let emoji = project?.emoji {
-                Text(emoji)
-                    .font(.system(size: 32))
-            }
         }
     }
 }
