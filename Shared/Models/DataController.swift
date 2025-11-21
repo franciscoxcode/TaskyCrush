@@ -10,7 +10,7 @@ final class DataController {
     private init() {
         let configuration = ModelConfiguration(
             "TaskyCrush",
-            cloudKitDatabase: .automatic
+            cloudKitDatabase: .private(Self.cloudKitIdentifier)
         )
 
         do {
@@ -31,4 +31,8 @@ final class DataController {
             }
         }
     }
+}
+
+extension DataController {
+    static let cloudKitIdentifier = "iCloud.com.franciscocasillas.TaskyCrush"
 }

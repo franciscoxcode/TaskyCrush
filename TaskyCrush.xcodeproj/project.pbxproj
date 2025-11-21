@@ -45,6 +45,11 @@
 			path = TaskyCrushMac;
 			sourceTree = "<group>";
 		};
+		EAF0C9B62FCFD00100FBEAAA /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +75,7 @@
 			children = (
 				EA8FDD3B2E788BBD008B660B /* TaskyCrush */,
 				EACDF6222FBE7BEE00A5DADD /* TaskyCrushMac */,
+				EAF0C9B62FCFD00100FBEAAA /* Shared */,
 				EA8FDD3A2E788BBD008B660B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,6 +106,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				EA8FDD3B2E788BBD008B660B /* TaskyCrush */,
+				EAF0C9B62FCFD00100FBEAAA /* Shared */,
 			);
 			name = TaskyCrush;
 			packageProductDependencies = (
@@ -122,6 +129,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				EACDF6222FBE7BEE00A5DADD /* TaskyCrushMac */,
+				EAF0C9B62FCFD00100FBEAAA /* Shared */,
 			);
 			name = TaskyCrushMac;
 			packageProductDependencies = (

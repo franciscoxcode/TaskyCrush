@@ -23,8 +23,8 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Filter your day by inbox or project and zero in on today, tomorrow, the weekend, or any custom date while overdue tasks automatically roll forward and recurring items schedule their next appearance.
 - Stay motivated with a live coin badge, instant point rewards on completion, and a full completed-history sheet that lets you reschedule, edit, and note-take without leaving the flow.
 - Work quickly through inline sheets for adding tasks, managing projects, picking emojis, and opening the markdown note editor right from the main screen.
-- Mirror the same “story” style on macOS with a companion target that renders the horizontal project chips and a + sheet to spin up new emoji projects on desktop.
-- Keep every device in sync with a SwiftData model container backed by CloudKit, while still working offline thanks to an automatic local-store fallback.
+- Mirror the same “story” style on macOS with a companion target that now reads/writes the exact same SwiftData store, so projects and tasks move seamlessly between iPhone, iPad, and Mac.
+- Keep every device in sync with a SwiftData model container backed by the CloudKit container `iCloud.com.franciscocasillas.TaskyCrush`, while still working offline thanks to an automatic local-store fallback.
 ---
 
 ## Stack Used
@@ -46,11 +46,11 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 ```bash
 /Assets.xcassets                 # App icon and accent color asset catalog for the UI chrome
 /CodexTestingAppApp.swift        # SwiftUI app entry that wires the notification manager and launches the main scene
-/Models/TaskItem.swift           # Codable task DTO covering status, recurrence, reminders, and markdown notes
-/Models/ProjectItem.swift        # Project “story” DTO with emoji, accent color, ordering, and tag catalog metadata
-/Models/SwiftDataModels.swift    # @Model-backed TaskRecord/ProjectRecord definitions for SwiftData + CloudKit
-/Models/DataController.swift     # Singleton that builds the SwiftData container with CloudKit + local fallbacks
-/Models/TaskDataStore.swift      # Persistence facade that fetches/saves models through SwiftData and handles migration
+/Shared/Models/TaskItem.swift           # Codable task DTO covering status, recurrence, reminders, and markdown notes
+/Shared/Models/ProjectItem.swift        # Project “story” DTO with emoji, accent color, ordering, and tag catalog metadata
+/Shared/Models/SwiftDataModels.swift    # @Model-backed TaskRecord/ProjectRecord definitions for SwiftData + CloudKit
+/Shared/Models/DataController.swift     # Singleton that builds the SwiftData container with CloudKit + local fallbacks
+/Shared/Models/TaskDataStore.swift      # Persistence facade that fetches/saves models through SwiftData and handles migration
 /Utils/RecurrenceEngine.swift    # Date engine that advances repeating tasks with weekday/weekend scope rules
 /Utils/NotificationManager.swift # Singleton for requesting permission and scheduling or cancelling local reminders
 /ViewModels/HomeViewModel.swift  # Observable store loading/persisting data, rolling overdue tasks, and managing points/tags
@@ -119,8 +119,8 @@ git clone https://github.com/franciscoxcode/TaskyCrush.git
 ### macOS Target
 
 - Select the `TaskyCrushMac` scheme to launch the macOS companion window.
-- You’ll see the horizontal project stories row with the shared visual styling and the `＋` button to create placeholder projects with the new sheet.
-- This target currently keeps its project list in-memory, making it perfect for previewing desktop UI without affecting the iOS data store.
+- You’ll see the horizontal project stories row with the shared visual styling and the `＋` button to create new projects from the same SwiftData store.
+- Projects and tasks are shared 1:1 with iOS/iPadOS via the CloudKit container, so any edits you make on Mac instantly reflect on your phone when both devices use the same Apple ID.
 
 ---
 
