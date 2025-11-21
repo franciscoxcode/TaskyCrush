@@ -13,9 +13,9 @@ struct StoryItem: View {
             VStack(spacing: 6) {
                 ZStack {
                     Circle().fill(.ultraThinMaterial)
-                    Text(emoji).font(.system(size: 24))
+                    Text(emoji).font(.system(size: 20))
                 }
-                .frame(width: selectedRingGradient != nil ? 58 : 56, height: selectedRingGradient != nil ? 58 : 56)
+                .frame(width: selectedRingGradient != nil ? 48 : 46, height: selectedRingGradient != nil ? 48 : 46)
                 .overlay(
                     Circle().strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
                 )

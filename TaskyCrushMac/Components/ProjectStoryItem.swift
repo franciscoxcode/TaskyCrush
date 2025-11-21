@@ -14,9 +14,9 @@ struct ProjectStoryItem: View {
                 ZStack {
                     Circle().fill(.ultraThinMaterial)
                     Text(project.emoji)
-                        .font(.system(size: 24))
+                        .font(.system(size: 20))
                 }
-                .frame(width: 58, height: 58)
+                .frame(width: 48, height: 48)
                 .overlay(
                     Circle().strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
                 )
