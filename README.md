@@ -25,6 +25,12 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Work quickly through inline sheets for adding tasks, managing projects, picking emojis, and opening the markdown note editor right from the main screen.
 - Mirror the same “story” style on macOS with a companion target that now reads/writes the exact same SwiftData store, so projects and tasks move seamlessly between iPhone, iPad, and Mac.
 - Keep every device in sync with a SwiftData model container backed by the CloudKit container `iCloud.com.franciscocasillas.TaskyCrush`, while still working offline thanks to an automatic local-store fallback.
+
+### Recent UI updates (macOS)
+- Simplified the companion header by removing the Tasky Crush title banner and sync disclaimer for a cleaner first impression.
+- Hid the "Tus proyectos" heading so the horizontal story list is the focal element.
+- Renamed the task section to `Tasks` and removed duplicate emoji badges from the trailing edge of rows.
+- Each row now shows the project emoji next to the project name label, keeping context without extra chrome.
 ---
 
 ## Stack Used
