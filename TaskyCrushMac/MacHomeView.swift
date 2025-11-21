@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct MacProject: Identifiable, Equatable {
     let id: UUID
@@ -60,6 +61,13 @@ struct MacHomeView: View {
     @State private var persistenceError: PersistenceError?
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var dateShortcut: DateShortcut = .today
+    @State private var selectedNoteTaskId: UUID? = nil
+
+    private static let noteHeaderDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
 
     init() {
         _projectRecords = Query(
@@ -116,6 +124,12 @@ struct MacHomeView: View {
         .onChange(of: projectRecords.map(\.id)) { ids in
             guard case let .project(id) = selection, !ids.contains(id) else { return }
             selection = .all
+        }
+        .onChange(of: displayedTasks.map(\.id)) { ids in
+            guard let selectedId = selectedNoteTaskId else { return }
+            if !ids.contains(selectedId) {
+                selectedNoteTaskId = nil
+            }
         }
     }
 
@@ -211,14 +225,8 @@ struct MacHomeView: View {
     }
 
     private var tasksSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(sectionTitle)
-                .font(.title3)
-                .bold()
-
-            Text(dateSubtitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            tasksHeader
 
             if displayedTasks.isEmpty {
                 ContentUnavailableView(
@@ -228,25 +236,199 @@ struct MacHomeView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(displayedTasks) { task in
-                            MacTaskRow(
-                                task: task,
-                                project: resolvedProject(for: task),
-                                onToggleDone: { toggleCompletion(for: task) }
-                            )
-                            .padding(12)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.secondary.opacity(0.2))
-                            )
-                        }
-                    }
-                    .padding(.vertical, 8)
+                tasksColumns
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var tasksHeader: some View {
+        if let noteTask = selectedNoteTask {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 16) {
+                    sectionHeaderStack
+                        .frame(minWidth: 320, maxWidth: .infinity, alignment: .leading)
+
+                    noteHeader(for: noteTask)
+                        .frame(minWidth: 320, maxWidth: .infinity, alignment: .leading)
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    sectionHeaderStack
+                    noteHeader(for: noteTask)
                 }
             }
+        } else {
+            sectionHeaderStack
+        }
+    }
+
+    private var sectionHeaderStack: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(sectionTitle)
+                .font(.title3)
+                .bold()
+
+            Text(dateSubtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func noteHeader(for task: TaskRecord) -> some View {
+        let project = resolvedProject(for: task)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(task.title)
+                .font(.headline)
+                .multilineTextAlignment(.leading)
+
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 12) {
+                    Label {
+                        Text(Self.noteHeaderDateFormatter.string(from: task.dueDate))
+                    } icon: {
+                        Image(systemName: "calendar")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                    noteProjectLabel(for: project)
+                }
+
+                Spacer(minLength: 8)
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedNoteTaskId = nil
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close note column")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func noteProjectLabel(for project: ProjectItem?) -> some View {
+        if let project {
+            Label {
+                Text(project.name)
+            } icon: {
+                Text(project.emoji)
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        } else {
+            Label("No project", systemImage: "tray")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var tasksColumns: some View {
+        if let noteTask = selectedNoteTask {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 16) {
+                    taskListView()
+                        .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
+
+                    noteSidebarView(for: noteTask)
+                        .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    taskListView()
+
+                    noteSidebarView(for: noteTask)
+                }
+            }
+        } else {
+            taskListView()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func taskListView() -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                ForEach(displayedTasks) { task in
+                    taskCard(for: task)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func noteSidebarView(for task: TaskRecord) -> some View {
+        MacNoteSidebar(
+            task: task,
+            onAutoSave: { text in saveNote(for: task, text: text) }
+        )
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.regularMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.primary.opacity(0.05))
+        )
+        .id(task.id)
+    }
+
+    private func taskCard(for task: TaskRecord) -> some View {
+        let isSelected = task.id == selectedNoteTaskId
+        return MacTaskRow(
+            task: task,
+            project: resolvedProject(for: task),
+            onToggleDone: { toggleCompletion(for: task) }
+        )
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.regularMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onTapGesture { handleTaskSelection(task) }
+    }
+
+    private var selectedNoteTask: TaskRecord? {
+        guard let id = selectedNoteTaskId else { return nil }
+        return displayedTasks.first(where: { $0.id == id })
+    }
+
+    private func handleTaskSelection(_ task: TaskRecord) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if selectedNoteTaskId == task.id {
+                selectedNoteTaskId = nil
+            } else {
+                selectedNoteTaskId = task.id
+            }
+        }
+    }
+
+    private func saveNote(for task: TaskRecord, text: String) {
+        let previousMarkdown = task.noteMarkdown
+        let previousUpdatedAt = task.noteUpdatedAt
+        task.noteMarkdown = text
+        task.noteUpdatedAt = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            task.noteMarkdown = previousMarkdown
+            task.noteUpdatedAt = previousUpdatedAt
+            persistenceError = PersistenceError(message: error.localizedDescription)
         }
     }
 
@@ -439,6 +621,90 @@ private struct MacTaskRow: View {
 
             Spacer()
         }
+    }
+}
+
+private struct MacNoteSidebar: View {
+    let task: TaskRecord
+    var onAutoSave: (String) -> Void
+
+    @State private var text: String = ""
+    @State private var lastSavedText: String = ""
+    @State private var lastSavedAt: Date?
+    @State private var isSaving: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $text)
+                    .font(.body)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(nsColor: .textBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08))
+                    )
+                    .frame(minHeight: 260)
+
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Type your note here…")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+            }
+
+            HStack(spacing: 6) {
+                if isSaving {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                }
+                Text(statusDetailText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { syncFromTask() }
+        .onChange(of: task.id) { _ in syncFromTask() }
+        .onChange(of: task.noteMarkdown ?? "") { _ in syncFromTask() }
+        .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+            autoSaveIfNeeded()
+        }
+        .onDisappear { autoSaveIfNeeded() }
+    }
+
+    private var statusDetailText: String {
+        if isSaving { return "Saving…" }
+        if text != lastSavedText { return "Unsaved changes" }
+        if let saved = lastSavedAt {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return "Updated \(formatter.localizedString(for: saved, relativeTo: Date()))"
+        }
+        return "No previous updates"
+    }
+
+    private func syncFromTask() {
+        let current = task.noteMarkdown ?? ""
+        text = current
+        lastSavedText = current
+        lastSavedAt = task.noteUpdatedAt
+    }
+
+    private func autoSaveIfNeeded() {
+        guard text != lastSavedText else { return }
+        isSaving = true
+        onAutoSave(text)
+        lastSavedText = text
+        lastSavedAt = Date()
+        isSaving = false
     }
 }
 

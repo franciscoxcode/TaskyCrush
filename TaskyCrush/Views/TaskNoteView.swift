@@ -1,10 +1,16 @@
 import SwiftUI
 
 struct TaskNoteView: View {
+    enum LayoutStyle {
+        case sheet
+        case sidebar
+    }
+
     let taskId: UUID
     let taskTitle: String
     let initialMarkdown: String
     var autoSaveIntervalSeconds: TimeInterval = 3
+    var layoutStyle: LayoutStyle
     // Callbacks
     var onSave: (_ text: String) -> Void
     var onAutoSave: (_ text: String) -> Void
@@ -17,11 +23,12 @@ struct TaskNoteView: View {
     @State private var lastSavedAt: Date? = nil
     @State private var isSaving: Bool = false
 
-    init(taskId: UUID, taskTitle: String, initialMarkdown: String, autoSaveIntervalSeconds: TimeInterval = 8, onSave: @escaping (_ text: String) -> Void, onAutoSave: @escaping (_ text: String) -> Void) {
+    init(taskId: UUID, taskTitle: String, initialMarkdown: String, autoSaveIntervalSeconds: TimeInterval = 8, layoutStyle: LayoutStyle = .sheet, onSave: @escaping (_ text: String) -> Void, onAutoSave: @escaping (_ text: String) -> Void) {
         self.taskId = taskId
         self.taskTitle = taskTitle
         self.initialMarkdown = initialMarkdown
         self.autoSaveIntervalSeconds = autoSaveIntervalSeconds
+        self.layoutStyle = layoutStyle
         self.onSave = onSave
         self.onAutoSave = onAutoSave
         _text = State(initialValue: initialMarkdown)
@@ -29,69 +36,79 @@ struct TaskNoteView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Inline editor with placeholder
-                ZStack(alignment: .topLeading) {
-                    MarkdownTextView(text: $text, controller: editorController)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemBackground))
-                        .ignoresSafeArea(.keyboard, edges: .bottom)
-
-                    if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Start your note here…")
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 18)
-                            .padding(.top, 14)
-                            .allowsHitTesting(false)
-                    }
+        Group {
+            if layoutStyle == .sheet {
+                NavigationStack {
+                    editorStack
+                        .navigationTitle(taskTitle.isEmpty ? "Note" : taskTitle)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Save") { saveAndClose() }
+                                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && initialMarkdown.isEmpty)
+                            }
+                        }
                 }
+            } else {
+                editorStack
+            }
+        }
+    }
 
-                // Save status row
-                HStack(spacing: 8) {
-                    if isSaving { ProgressView().scaleEffect(0.8) }
-                    Text(statusText)
-                        .font(.caption)
+    private var editorStack: some View {
+        VStack(spacing: 0) {
+            // Inline editor with placeholder
+            ZStack(alignment: .topLeading) {
+                MarkdownTextView(text: $text, controller: editorController)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Start your note here…")
                         .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial)
-            }
-            .navigationTitle(taskTitle.isEmpty ? "Note" : taskTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveAndClose() }
-                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && initialMarkdown.isEmpty)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 14)
+                        .allowsHitTesting(false)
                 }
             }
-            // Autosave timer
-            .onReceive(Timer.publish(every: autoSaveIntervalSeconds, on: .main, in: .common).autoconnect()) { _ in
-                autoSaveIfNeeded()
+
+            // Save status row
+            HStack(spacing: 8) {
+                if isSaving { ProgressView().scaleEffect(0.8) }
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
             }
-            .onDisappear {
-                autoSaveIfNeeded()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial)
+        }
+        // Autosave timer
+        .onReceive(Timer.publish(every: autoSaveIntervalSeconds, on: .main, in: .common).autoconnect()) { _ in
+            autoSaveIfNeeded()
+        }
+        .onDisappear {
+            autoSaveIfNeeded()
+        }
+        .onAppear { editorController.showTokens = showTokens }
+        .onChange(of: showTokens) { _, newValue in
+            editorController.showTokens = newValue
+            editorController.refreshPresentation()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button(action: { showTokens.toggle() }) {
+                Text("Markdown")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(showTokens ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.2))
+                    .clipShape(Capsule())
             }
-            .onAppear { editorController.showTokens = showTokens }
-            .onChange(of: showTokens) { _, newValue in
-                editorController.showTokens = newValue
-                editorController.refreshPresentation()
-            }
-            .overlay(alignment: .bottomTrailing) {
-                Button(action: { showTokens.toggle() }) {
-                    Text("Markdown")
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(showTokens ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.2))
-                        .clipShape(Capsule())
-                }
-                .padding(.trailing, 12)
-                .padding(.bottom, 50)
-            }
+            .padding(.trailing, 12)
+            .padding(.bottom, 50)
         }
     }
 
@@ -121,7 +138,9 @@ struct TaskNoteView: View {
         lastSavedText = text
         lastSavedAt = Date()
         isSaving = false
-        dismiss()
+        if layoutStyle == .sheet {
+            dismiss()
+        }
     }
 
 }

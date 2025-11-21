@@ -12,6 +12,7 @@ import UIKit
 struct ContentView: View {
     @StateObject private var viewModel = HomeViewModel()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isPresentingAdd = false
     @State private var isPresentingManageProjects = false
     @State private var editingTask: TaskItem?
@@ -58,7 +59,9 @@ struct ContentView: View {
     @FocusState private var isNewProjectNameFocused: Bool
     // Pending hide window for recently completed tasks
     @State private var pendingHideUntil: [UUID: Date] = [:]
-    // Full-screen note editor state
+    // Currently focused task note in the side column
+    @State private var selectedNoteTaskId: TaskItem.ID? = nil
+    // Fallback sheet note editor for compact layouts
     @State private var openNoteTask: TaskItem? = nil
 
     var body: some View {
@@ -102,12 +105,56 @@ struct ContentView: View {
 
                 DateScopeBar(dateScope: $dateScope, showScopeDatePicker: $showScopeDatePicker, scopeCustomDate: $scopeCustomDate)
 
-                contentList
+                if shouldUseSidebarLayout {
+                    GeometryReader { proxy in
+                        let spacing: CGFloat = 12
+                        let minNoteWidth: CGFloat = 200
+                        let minListWidth: CGFloat = 220
+                        let minimumCombinedWidth = minListWidth + minNoteWidth + spacing
+                        let fullWidth = proxy.size.width
+
+                        if fullWidth < minimumCombinedWidth {
+                            VStack(spacing: spacing) {
+                                contentList
+                                noteSidebar
+                            }
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        } else {
+                            let availableWidth = max(fullWidth - spacing, 0)
+                            let targetListWidth = availableWidth * 0.5
+                            let maxListWidth = max(availableWidth - minNoteWidth, minListWidth)
+                            let taskColumnWidth = min(max(targetListWidth, minListWidth), maxListWidth)
+
+                            HStack(alignment: .top, spacing: spacing) {
+                                contentList
+                                    .frame(width: taskColumnWidth)
+                                    .frame(maxHeight: .infinity, alignment: .top)
+
+                                noteSidebar
+                                    .frame(minWidth: minNoteWidth, maxWidth: .infinity, alignment: .topLeading)
+                            }
+                        }
+                    }
+                } else {
+                    contentList
+                }
             }
             .onChangeCompat(of: viewModel.tasks) { _, tasks in
                 // If there are no inbox tasks anymore, clear inbox filter
                 if selectedFilter == .inbox && !tasks.contains(where: { $0.project == nil && !$0.isDone }) {
                     selectedFilter = .none
+                }
+                if let focusedId = selectedNoteTaskId,
+                   !tasks.contains(where: { $0.id == focusedId }) {
+                    selectedNoteTaskId = nil
+                }
+            }
+            .onChangeCompat(of: horizontalSizeClass) { _, newValue in
+                let isSidebar = (newValue ?? .regular) != .compact
+                if isSidebar {
+                    openNoteTask = nil
+                } else {
+                    selectedNoteTaskId = nil
                 }
             }
             .alert(
@@ -194,6 +241,7 @@ struct ContentView: View {
                     taskTitle: task.title,
                     initialMarkdown: task.noteMarkdown ?? "",
                     autoSaveIntervalSeconds: 3,
+                    layoutStyle: .sheet,
                     onSave: { text in
                         viewModel.updateTaskNote(id: task.id, noteMarkdown: text)
                     },
@@ -416,6 +464,90 @@ extension ContentView {
         }
     }
 
+    private var selectedNoteTask: TaskItem? {
+        guard let id = selectedNoteTaskId else { return nil }
+        return viewModel.tasks.first(where: { $0.id == id })
+    }
+
+    @ViewBuilder
+    private var noteSidebar: some View {
+        if let task = selectedNoteTask {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(task.title)
+                            .font(.headline)
+                            .multilineTextAlignment(.leading)
+                        Text(projectSummary(for: task))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text(noteSidebarStatus(for: task))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedNoteTaskId = nil
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Close note column")
+                    .buttonStyle(.plain)
+                }
+
+                Divider()
+
+                TaskNoteView(
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    initialMarkdown: task.noteMarkdown ?? "",
+                    autoSaveIntervalSeconds: 3,
+                    layoutStyle: .sidebar,
+                    onSave: { text in
+                        viewModel.updateTaskNote(id: task.id, noteMarkdown: text)
+                    },
+                    onAutoSave: { text in
+                        viewModel.updateTaskNote(id: task.id, noteMarkdown: text)
+                    }
+                )
+                .id(task.id)
+                .frame(minHeight: 280)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05))
+            )
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Task notes", systemImage: "note.text")
+                    .font(.headline)
+                Text("Select a task to view, edit, and autosave its note alongside your list.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05))
+            )
+        }
+    }
+
     private var headerTitle: String {
         switch selectedFilter {
         case .project(let id):
@@ -424,6 +556,38 @@ extension ContentView {
             return "Unassigned"
         case .none:
             return ""
+        }
+    }
+
+    private var shouldUseSidebarLayout: Bool {
+        if let sizeClass = horizontalSizeClass {
+            return sizeClass != .compact
+        }
+        return true
+    }
+
+    private func projectSummary(for task: TaskItem) -> String {
+        if let project = task.project {
+            return "\(project.emoji) \(project.name)"
+        }
+        return "Unassigned"
+    }
+
+    private func noteSidebarStatus(for task: TaskItem) -> String {
+        if let updated = task.noteUpdatedAt {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return "Updated \(formatter.localizedString(for: updated, relativeTo: Date()))"
+        }
+        let hasText = !(task.noteMarkdown ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return hasText ? "Unsaved note" : "No note yet"
+    }
+
+    private func handleNoteTap(for task: TaskItem) {
+        if shouldUseSidebarLayout {
+            focusNoteSidebar(on: task)
+        } else {
+            openNoteTask = task
         }
     }
 
@@ -513,7 +677,7 @@ extension ContentView {
                         onEdit: { task in editingTask = task },
                         onDelete: { task in pendingDeleteTask = task },
                         onMoveMenu: { task in pendingMoveTask = task },
-                        onOpenNote: { task in openNoteTask = task }
+                        onOpenNote: { task in handleNoteTap(for: task) }
                     )
                 )
             }
@@ -535,7 +699,7 @@ extension ContentView {
                             onEdit: { task in editingTask = task },
                             onDelete: { task in pendingDeleteTask = task },
                             onMoveMenu: { task in pendingMoveTask = task },
-                            onOpenNote: { task in openNoteTask = task }
+                            onOpenNote: { task in handleNoteTap(for: task) }
                         )
                         .id(timeAnchor) // force regrouping headers on day change
                     )
@@ -549,7 +713,7 @@ extension ContentView {
                             onEdit: { task in editingTask = task },
                             onDelete: { task in pendingDeleteTask = task },
                             onMoveMenu: { task in pendingMoveTask = task },
-                            onOpenNote: { task in openNoteTask = task }
+                            onOpenNote: { task in handleNoteTap(for: task) }
                         )
                     )
                 default:
@@ -563,7 +727,7 @@ extension ContentView {
                             onEdit: { task in editingTask = task },
                             onDelete: { task in pendingDeleteTask = task },
                             onMoveMenu: { task in pendingMoveTask = task },
-                            onOpenNote: { task in openNoteTask = task }
+                            onOpenNote: { task in handleNoteTap(for: task) }
                         )
                     )
                 }
@@ -839,6 +1003,12 @@ extension ContentView {
         case (nil, nil): return true
         case let (x?, y?): return x.description == y.description
         default: return false
+        }
+    }
+
+    private func focusNoteSidebar(on task: TaskItem) {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+            selectedNoteTaskId = task.id
         }
     }
 
