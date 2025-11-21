@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		EA8FDD392E788BBD008B660B /* TaskyCrush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaskyCrush.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaskyCrushMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -17,6 +18,13 @@
 				Info.plist,
 			);
 			target = EA8FDD382E788BBD008B660B /* TaskyCrush */;
+		};
+		EACDF6212FBE7BEE00A5DADD /* Exceptions for "TaskyCrushMac" folder in "TaskyCrushMac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EACDF6292FBE7BEE00A5DADD /* TaskyCrushMac */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -29,10 +37,25 @@
 			path = TaskyCrush;
 			sourceTree = "<group>";
 		};
+		EACDF6222FBE7BEE00A5DADD /* TaskyCrushMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EACDF6212FBE7BEE00A5DADD /* Exceptions for "TaskyCrushMac" folder in "TaskyCrushMac" target */,
+			);
+			path = TaskyCrushMac;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		EA8FDD362E788BBD008B660B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EACDF6262FBE7BEE00A5DADD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				EA8FDD3B2E788BBD008B660B /* TaskyCrush */,
+				EACDF6222FBE7BEE00A5DADD /* TaskyCrushMac */,
 				EA8FDD3A2E788BBD008B660B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				EA8FDD392E788BBD008B660B /* TaskyCrush.app */,
+				EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +108,28 @@
 			productReference = EA8FDD392E788BBD008B660B /* TaskyCrush.app */;
 			productType = "com.apple.product-type.application";
 		};
+		EACDF6292FBE7BEE00A5DADD /* TaskyCrushMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EACDF62F2FBE7BEE00A5DADD /* Build configuration list for PBXNativeTarget "TaskyCrushMac" */;
+			buildPhases = (
+				EACDF6272FBE7BEE00A5DADD /* Sources */,
+				EACDF6262FBE7BEE00A5DADD /* Frameworks */,
+				EACDF6282FBE7BEE00A5DADD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EACDF6222FBE7BEE00A5DADD /* TaskyCrushMac */,
+			);
+			name = TaskyCrushMac;
+			packageProductDependencies = (
+			);
+			productName = TaskyCrushMac;
+			productReference = EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -94,6 +141,9 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					EA8FDD382E788BBD008B660B = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					EACDF6292FBE7BEE00A5DADD = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -113,6 +163,7 @@
 			projectRoot = "";
 			targets = (
 				EA8FDD382E788BBD008B660B /* TaskyCrush */,
+				EACDF6292FBE7BEE00A5DADD /* TaskyCrushMac */,
 			);
 		};
 /* End PBXProject section */
@@ -125,10 +176,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EACDF6282FBE7BEE00A5DADD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		EA8FDD352E788BBD008B660B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EACDF6272FBE7BEE00A5DADD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -329,6 +394,58 @@
 			};
 			name = Release;
 		};
+		EACDF62D2FBE7BEE00A5DADD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TaskyCrushMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.franciscoasillas.taskymac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		EACDF62E2FBE7BEE00A5DADD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TaskyCrushMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.franciscoasillas.taskymac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -346,6 +463,15 @@
 			buildConfigurations = (
 				EA8FDD452E788BBE008B660B /* Debug */,
 				EA8FDD462E788BBE008B660B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EACDF62F2FBE7BEE00A5DADD /* Build configuration list for PBXNativeTarget "TaskyCrushMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EACDF62D2FBE7BEE00A5DADD /* Debug */,
+				EACDF62E2FBE7BEE00A5DADD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
