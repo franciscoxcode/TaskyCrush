@@ -87,9 +87,17 @@ struct MacHomeView: View {
     }
 
     private var projectsRow: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
+                HStack(spacing: 10) {
+                    StoryItem(
+                        title: "Nuevo",
+                        emoji: "＋",
+                        isSelected: false
+                    ) {
+                        showingAddProject = true
+                    }
+
                     StoryItem(
                         title: "Todos",
                         emoji: "⭐️",
@@ -98,20 +106,14 @@ struct MacHomeView: View {
                         selection = .all
                     }
 
-                    StoryItem(
-                        title: "Inbox",
-                        emoji: "📥",
-                        isSelected: selection == .inbox
-                    ) {
-                        selection = .inbox
-                    }
-
-                    StoryItem(
-                        title: "Nuevo",
-                        emoji: "＋",
-                        isSelected: false
-                    ) {
-                        showingAddProject = true
+                    if hasInboxTasks {
+                        StoryItem(
+                            title: "Inbox",
+                            emoji: "📥",
+                            isSelected: selection == .inbox
+                        ) {
+                            selection = .inbox
+                        }
                     }
 
                     ForEach(projects) { project in
@@ -123,7 +125,7 @@ struct MacHomeView: View {
                         }
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 0)
                 .padding(.leading, 4)
             }
         }
@@ -181,6 +183,10 @@ struct MacHomeView: View {
         case let .project(id):
             return base.filter { $0.projectId == id }
         }
+    }
+
+    private var hasInboxTasks: Bool {
+        taskRecords.contains { !$0.isDone && $0.projectId == nil }
     }
 
     private var sectionTitle: String {
