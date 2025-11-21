@@ -32,12 +32,34 @@ struct MacHomeView: View {
         }
     }
 
+    enum DateShortcut: CaseIterable, Identifiable {
+        case pickDate
+        case anytime
+        case today
+        case tomorrow
+        case weekend
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .pickDate: return "Pick Date"
+            case .anytime: return "Anytime"
+            case .today: return "Today"
+            case .tomorrow: return "Tomorrow"
+            case .weekend: return "Weekend"
+            }
+        }
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Query private var projectRecords: [ProjectRecord]
     @Query private var taskRecords: [TaskRecord]
     @State private var selection: TaskFilter = .all
     @State private var showingAddProject = false
     @State private var persistenceError: PersistenceError?
+    @State private var selectedDate = Calendar.current.startOfDay(for: Date())
+    @State private var dateShortcut: DateShortcut = .today
 
     init() {
         _projectRecords = Query(
@@ -58,7 +80,18 @@ struct MacHomeView: View {
 
             Divider()
 
-            tasksSection
+            if dateShortcut == .pickDate {
+                HStack(alignment: .top, spacing: 4) {
+                    calendarView
+
+                    tasksSection
+                        .frame(maxWidth: .infinity)
+                        .padding(.leading, 16)
+                }
+            } else {
+                tasksSection
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(24)
         .frame(minWidth: 900, minHeight: 560)
@@ -87,7 +120,7 @@ struct MacHomeView: View {
     }
 
     private var projectsRow: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     StoryItem(
@@ -128,16 +161,66 @@ struct MacHomeView: View {
                 .padding(.vertical, 0)
                 .padding(.leading, 4)
             }
+
+            dateShortcutsRow
         }
     }
 
+    private var dateShortcutsRow: some View {
+        HStack(spacing: 12) {
+            ForEach(DateShortcut.allCases) { shortcut in
+                Button {
+                    if shortcut == .pickDate, dateShortcut == .pickDate {
+                        dateShortcut = .today
+                    } else {
+                        dateShortcut = shortcut
+                    }
+                } label: {
+                    Text(shortcut.title)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(shortcut == dateShortcut ? Color.accentColor : Color.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.leading, 4)
+        .padding(.top, 8)
+    }
+
+    private var calendarView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Calendario")
+                .font(.title3)
+                .bold()
+
+            DatePicker(
+                "Selecciona una fecha",
+                selection: $selectedDate,
+                displayedComponents: [.date]
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .scaleEffect(1.05, anchor: .topLeading)
+        }
+        .padding(6)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.regularMaterial)
+        )
+    }
+
     private var tasksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(sectionTitle)
                 .font(.title3)
                 .bold()
 
-            if filteredTasks.isEmpty {
+            Text(dateSubtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if displayedTasks.isEmpty {
                 ContentUnavailableView(
                     "Sin tareas",
                     systemImage: "checkmark.circle",
@@ -147,7 +230,7 @@ struct MacHomeView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(filteredTasks) { task in
+                        ForEach(displayedTasks) { task in
                             MacTaskRow(
                                 task: task,
                                 project: resolvedProject(for: task),
@@ -182,6 +265,46 @@ struct MacHomeView: View {
             return base.filter { $0.projectId == nil }
         case let .project(id):
             return base.filter { $0.projectId == id }
+        }
+    }
+
+    private var displayedTasks: [TaskRecord] {
+        let calendar = Calendar.current
+        switch dateShortcut {
+        case .anytime:
+            return filteredTasks
+        case .today:
+            let today = calendar.startOfDay(for: Date())
+            return filteredTasks.filter { calendar.isDate($0.dueDate, inSameDayAs: today) }
+        case .tomorrow:
+            guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())) else {
+                return []
+            }
+            return filteredTasks.filter { calendar.isDate($0.dueDate, inSameDayAs: tomorrow) }
+        case .weekend:
+            return filteredTasks.filter { calendar.isDateInWeekend($0.dueDate) }
+        case .pickDate:
+            return filteredTasks.filter { calendar.isDate($0.dueDate, inSameDayAs: selectedDate) }
+        }
+    }
+
+    private var dateSubtitle: String {
+        let calendar = Calendar.current
+        switch dateShortcut {
+        case .anytime:
+            return "Anytime"
+        case .today:
+            let today = calendar.startOfDay(for: Date())
+            return today.formatted(date: .complete, time: .omitted)
+        case .tomorrow:
+            if let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())) {
+                return tomorrow.formatted(date: .complete, time: .omitted)
+            }
+            return "Tomorrow"
+        case .weekend:
+            return "Weekend"
+        case .pickDate:
+            return selectedDate.formatted(date: .complete, time: .omitted)
         }
     }
 

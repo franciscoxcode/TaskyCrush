@@ -31,6 +31,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Hid the "Tus proyectos" heading so the horizontal story list is the focal element.
 - Renamed the task section to `Tasks` and removed duplicate emoji badges from the trailing edge of rows.
 - Each row now shows the project emoji next to the project name label, keeping context without extra chrome.
+- Added calendar-driven shortcuts (Today, Tomorrow, Weekend, Pick Date) so the macOS list can filter tasks by date and only show the picker when needed.
 ---
 
 ## Stack Used
