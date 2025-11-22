@@ -49,6 +49,7 @@ struct MacAddProjectView: View {
             }
         }
         .padding(20)
+        .fixedSize(horizontal: true, vertical: false)
         .sheet(isPresented: $showEmojiPicker) {
             MacEmojiPickerView { selected in
                 emoji = selected
