@@ -9,11 +9,10 @@ struct MacAddProjectView: View {
     var onCreate: (String, String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("New project")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
                 Button {
@@ -27,18 +26,18 @@ struct MacAddProjectView: View {
                 }
                 .buttonStyle(.plain)
 
-                TextField("Project name", text: $name)
+                TextField("projectname", text: $name)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Spacer()
+
                 Button("Cancel") {
                     dismiss()
                 }
-                .buttonStyle(.plain)
-
-                Spacer()
+                .buttonStyle(.bordered)
 
                 Button("Create") {
                     onCreate(name.trimmingCharacters(in: .whitespacesAndNewlines), emoji)
@@ -48,8 +47,7 @@ struct MacAddProjectView: View {
                 .disabled(!canCreate)
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(20)
         .sheet(isPresented: $showEmojiPicker) {
             MacEmojiPickerView { selected in
                 emoji = selected
