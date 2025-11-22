@@ -58,6 +58,7 @@ struct MacHomeView: View {
     @Query private var taskRecords: [TaskRecord]
     @State private var selection: TaskFilter = .all
     @State private var showingAddProject = false
+    @State private var editingProject: MacProject?
     @State private var persistenceError: PersistenceError?
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var dateShortcut: DateShortcut = .today
@@ -108,6 +109,13 @@ struct MacHomeView: View {
                 if let newId = addProject(name: name, emoji: emoji) {
                     selection = .project(newId)
                 }
+            }
+        }
+        .sheet(item: $editingProject) { project in
+            MacEditProjectView(project: project) { name, emoji in
+                updateProject(id: project.id, name: name, emoji: emoji)
+            } onDelete: {
+                deleteProject(id: project.id)
             }
         }
         .alert("No pudimos guardar tus cambios", isPresented: .init(
@@ -168,6 +176,11 @@ struct MacHomeView: View {
                             isSelected: selection == .project(project.id)
                         ) {
                             toggleSelection(for: project.id)
+                        }
+                        .contextMenu {
+                            Button("Edit \(project.name)") {
+                                editingProject = project
+                            }
                         }
                     }
                 }
@@ -527,6 +540,50 @@ struct MacHomeView: View {
             modelContext.delete(record)
             persistenceError = PersistenceError(message: error.localizedDescription)
             return nil
+        }
+    }
+
+    private func updateProject(id: UUID, name: String, emoji: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !trimmedEmoji.isEmpty else { return }
+        guard let record = projectRecords.first(where: { $0.id == id }) else { return }
+        let previousName = record.name
+        let previousEmoji = record.emoji
+        record.name = trimmedName
+        record.emoji = trimmedEmoji
+        do {
+            try modelContext.save()
+        } catch {
+            record.name = previousName
+            record.emoji = previousEmoji
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func deleteProject(id: UUID) {
+        guard let record = projectRecords.first(where: { $0.id == id }) else { return }
+        let affectedTasks = taskRecords.filter { $0.projectId == id && !$0.isDone }
+        let previousAssignments = affectedTasks.map { ($0, $0.projectId, $0.tag) }
+        modelContext.delete(record)
+        for task in affectedTasks {
+            task.projectId = nil
+            task.tag = nil
+        }
+        do {
+            try modelContext.save()
+            if selection == .project(id) {
+                selection = .all
+            }
+        } catch {
+            if record.modelContext == nil {
+                modelContext.insert(record)
+            }
+            for (task, previousProjectId, previousTag) in previousAssignments {
+                task.projectId = previousProjectId
+                task.tag = previousTag
+            }
+            persistenceError = PersistenceError(message: error.localizedDescription)
         }
     }
 
