@@ -28,7 +28,7 @@ struct MacAddProjectView: View {
 
                 TextField("Project Name", text: $name)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(maxWidth: 220)
+                    .frame(maxWidth: 330)
             }
             .padding(.horizontal, 6)
 
