@@ -177,10 +177,8 @@ struct MacHomeView: View {
                         ) {
                             toggleSelection(for: project.id)
                         }
-                        .contextMenu {
-                            Button("Edit \(project.name)") {
-                                editingProject = project
-                            }
+                        .onSecondaryClick {
+                            editingProject = project
                         }
                     }
                 }
@@ -761,6 +759,52 @@ private struct MacNoteSidebar: View {
         lastSavedText = text
         lastSavedAt = Date()
         isSaving = false
+    }
+}
+
+private extension View {
+    func onSecondaryClick(perform action: @escaping () -> Void) -> some View {
+        modifier(SecondaryClickModifier(action: action))
+    }
+}
+
+private struct SecondaryClickModifier: ViewModifier {
+    var action: () -> Void
+
+    func body(content: Content) -> some View {
+        content.overlay(SecondaryClickCaptureView(onSecondaryClick: action))
+    }
+}
+
+private struct SecondaryClickCaptureView: NSViewRepresentable {
+    var onSecondaryClick: () -> Void
+
+    func makeNSView(context: Context) -> SecondaryClickCatcherView {
+        let view = SecondaryClickCatcherView()
+        view.action = onSecondaryClick
+        return view
+    }
+
+    func updateNSView(_ nsView: SecondaryClickCatcherView, context: Context) {
+        nsView.action = onSecondaryClick
+    }
+}
+
+private final class SecondaryClickCatcherView: NSView {
+    var action: (() -> Void)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let event = window?.currentEvent else { return nil }
+        switch event.type {
+        case .rightMouseDown, .otherMouseDown:
+            return self
+        default:
+            return nil
+        }
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        action?()
     }
 }
 
