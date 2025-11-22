@@ -109,7 +109,6 @@ struct MacHomeView: View {
                     selection = .project(newId)
                 }
             }
-            .frame(minWidth: 360, minHeight: 280)
         }
         .alert("No pudimos guardar tus cambios", isPresented: .init(
             get: { persistenceError != nil },
