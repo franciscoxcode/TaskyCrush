@@ -9,45 +9,53 @@ struct MacAddProjectView: View {
     var onCreate: (String, String) -> Void
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Project")) {
-                    HStack(spacing: 12) {
-                        Button {
-                            showEmojiPicker = true
-                        } label: {
-                            Text(emoji.isEmpty ? "✨" : emoji)
-                                .font(.system(size: 24))
-                                .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 18) {
+            Text("New project")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        TextField("Project name", text: $name)
-                    }
+            HStack(spacing: 12) {
+                Button {
+                    showEmojiPicker = true
+                } label: {
+                    Text(emoji.isEmpty ? "✨" : emoji)
+                        .font(.system(size: 24))
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
+
+                TextField("Project name", text: $name)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
             }
-            .navigationTitle("New Project")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            .padding(.horizontal, 4)
+
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    dismiss()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        onCreate(name.trimmingCharacters(in: .whitespacesAndNewlines), emoji)
-                        dismiss()
-                    }
-                    .disabled(!canCreate)
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button("Create") {
+                    onCreate(name.trimmingCharacters(in: .whitespacesAndNewlines), emoji)
+                    dismiss()
                 }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canCreate)
             }
-            .sheet(isPresented: $showEmojiPicker) {
-                MacEmojiPickerView { selected in
-                    emoji = selected
-                }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .sheet(isPresented: $showEmojiPicker) {
+            MacEmojiPickerView { selected in
+                emoji = selected
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
     }
 
