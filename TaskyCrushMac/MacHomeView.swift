@@ -219,10 +219,13 @@ struct MacHomeView: View {
                         }
                     }
 
-                    ForEach(projects) { project in
+                    ForEach(orderedProjectsForScope()) { project in
+                        let hasActive = projectHasTasksForCurrentScope(project)
                         ProjectStoryItem(
                             project: project,
-                            isSelected: selection == .project(project.id)
+                            isSelected: selection == .project(project.id),
+                            dimmed: shouldDimProjects() && !hasActive,
+                            hasActiveForScope: hasActive
                         ) {
                             toggleSelection(for: project.id)
                         }
@@ -572,6 +575,42 @@ struct MacHomeView: View {
             return "Inbox"
         case let .project(id):
             return projectRecords.first(where: { $0.id == id })?.name ?? "Proyecto"
+        }
+    }
+
+    private func orderedProjectsForScope() -> [MacProject] {
+        let sorted = projects
+        guard shouldDimProjects() else { return sorted }
+        let withTasks = sorted.filter { projectHasTasksForCurrentScope($0) }
+        let withoutTasks = sorted.filter { !projectHasTasksForCurrentScope($0) }
+        return withTasks + withoutTasks
+    }
+
+    private func shouldDimProjects() -> Bool {
+        true
+    }
+
+    private func projectHasTasksForCurrentScope(_ project: MacProject) -> Bool {
+        let calendar = Calendar.current
+        let scopedTasks = taskRecords.filter { !$0.isDone && $0.projectId == project.id }
+        guard !scopedTasks.isEmpty else { return false }
+
+        switch dateShortcut {
+        case .anytime:
+            return true
+        case .today:
+            let today = calendar.startOfDay(for: Date())
+            return scopedTasks.contains { calendar.isDate($0.dueDate, inSameDayAs: today) }
+        case .tomorrow:
+            guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())) else {
+                return false
+            }
+            return scopedTasks.contains { calendar.isDate($0.dueDate, inSameDayAs: tomorrow) }
+        case .weekend:
+            return scopedTasks.contains { calendar.isDateInWeekend($0.dueDate) }
+        case .pickDate:
+            let target = calendar.startOfDay(for: selectedDate)
+            return scopedTasks.contains { calendar.isDate($0.dueDate, inSameDayAs: target) }
         }
     }
 

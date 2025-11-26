@@ -36,6 +36,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Added a split task/note layout with a responsive header so the selected note’s metadata aligns with the task column title, and the close button anchors to the right edge of the metadata row.
 - Rebuilt the note sidebar card: the placeholder now matches the typing inset, autosave strings are in English, and the status indicator reports the last update time directly in the note footer.
 - Added the full-screen Add Task sheet from iOS to macOS, triggered by a floating button or the `N` key, so you can create tasks (projects, tags, reminders, recurrence, notes) without reaching for another device.
+- Matched the macOS project stories bar with iOS so projects that have tasks for the selected day get the colorful outline, while inactive projects fade and move to the back for instant visual clarity.
 ---
 
 ## Stack Used
