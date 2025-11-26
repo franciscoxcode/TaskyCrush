@@ -26,7 +26,7 @@ struct MacHomeView: View {
 
         var title: String {
             switch self {
-            case .all: return "Todos"
+            case .all: return "All"
             case .inbox: return "Inbox"
             case .project: return "Proyecto"
             }
@@ -202,33 +202,43 @@ struct MacHomeView: View {
                     }
                     .keyboardShortcut("p", modifiers: [])
 
-                    StoryItem(
-                        title: "Todos",
-                        emoji: "⭐️",
-                        isSelected: selection == .all
-                    ) {
-                        selection = .all
-                    }
-
-                    if hasInboxTasks {
+                    shortcutStoryItem(number: 1) {
                         StoryItem(
-                            title: "Inbox",
-                            emoji: "📥",
-                            isSelected: selection == .inbox
+                            title: "All",
+                            emoji: "⭐️",
+                            isSelected: selection == .all,
+                            shortcutNumber: 1
                         ) {
-                            selection = .inbox
+                            selection = .all
                         }
                     }
 
-                    ForEach(orderedProjectsForScope()) { project in
+                    if hasInboxTasks {
+                        shortcutStoryItem(number: 0) {
+                            StoryItem(
+                                title: "Inbox",
+                                emoji: "📥",
+                                isSelected: selection == .inbox,
+                                shortcutNumber: 0
+                            ) {
+                                selection = .inbox
+                            }
+                        }
+                    }
+
+                    ForEach(Array(orderedProjectsForScope().enumerated()), id: \.element.id) { offset, project in
                         let hasActive = projectHasTasksForCurrentScope(project)
-                        ProjectStoryItem(
-                            project: project,
-                            isSelected: selection == .project(project.id),
-                            dimmed: shouldDimProjects() && !hasActive,
-                            hasActiveForScope: hasActive
-                        ) {
-                            toggleSelection(for: project.id)
+                        let shortcutNumber = offset + 2
+                        shortcutStoryItem(number: shortcutNumber) {
+                            ProjectStoryItem(
+                                project: project,
+                                isSelected: selection == .project(project.id),
+                                dimmed: shouldDimProjects() && !hasActive,
+                                hasActiveForScope: hasActive,
+                                shortcutNumber: shortcutNumber
+                            ) {
+                                toggleSelection(for: project.id)
+                            }
                         }
                         .onSecondaryClick {
                             editingProject = project
@@ -613,6 +623,21 @@ struct MacHomeView: View {
             let target = calendar.startOfDay(for: selectedDate)
             return scopedTasks.contains { calendar.isDate($0.dueDate, inSameDayAs: target) }
         }
+    }
+
+    @ViewBuilder
+    private func shortcutStoryItem<Content: View>(number: Int, @ViewBuilder content: () -> Content) -> some View {
+        let built = content()
+        if let key = shortcutKeyEquivalent(for: number) {
+            built.keyboardShortcut(key, modifiers: [])
+        } else {
+            built
+        }
+    }
+
+    private func shortcutKeyEquivalent(for number: Int) -> KeyEquivalent? {
+        guard (0...9).contains(number) else { return nil }
+        return KeyEquivalent(Character(String(number)))
     }
 
     private func presentAddTask() {

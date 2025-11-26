@@ -5,6 +5,7 @@ struct ProjectStoryItem: View {
     let isSelected: Bool
     var dimmed: Bool = false
     var hasActiveForScope: Bool = false
+    var shortcutNumber: Int? = nil
     var onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
@@ -74,6 +75,12 @@ struct ProjectStoryItem: View {
                     .frame(width: 64)
             }
             .opacity((dimmed && !isSelected) ? 0.45 : 1)
+            .overlay(alignment: .topTrailing) {
+                if let shortcutNumber {
+                    ShortcutBadge(number: shortcutNumber)
+                        .offset(x: 12, y: -6)
+                }
+            }
         }
         .buttonStyle(.plain)
     }

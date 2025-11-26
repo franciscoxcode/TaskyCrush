@@ -5,6 +5,7 @@ struct StoryItem: View {
     let emoji: String
     let isSelected: Bool
     var selectedRingGradient: AngularGradient? = nil
+    var shortcutNumber: Int? = nil
     var onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
@@ -57,6 +58,12 @@ struct StoryItem: View {
                     .clipShape(Capsule())
                     .lineLimit(1)
                     .frame(width: 64)
+            }
+            .overlay(alignment: .topTrailing) {
+                if let shortcutNumber {
+                    ShortcutBadge(number: shortcutNumber)
+                        .offset(x: 12, y: -6)
+                }
             }
         }
         .buttonStyle(.plain)
