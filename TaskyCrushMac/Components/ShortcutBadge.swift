@@ -6,16 +6,17 @@ struct ShortcutBadge: View {
 
     var body: some View {
         Text("\(number)")
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
+            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1.5)
             .background(
                 Capsule()
-                    .fill(colorScheme == .dark ? Color.black.opacity(0.75) : Color.white.opacity(0.9))
+                    .fill(colorScheme == .dark ? Color.black.opacity(0.85) : Color.white)
             )
             .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
             .overlay(
-                Capsule().stroke(Color.primary.opacity(0.1))
+                Capsule().stroke(Color.primary.opacity(0.12))
             )
+            .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
 }

@@ -30,6 +30,12 @@ struct StoryItem: View {
                     }
                 )
                 .padding(.top, selectedRingGradient != nil ? 2 : 0)
+                .overlay(alignment: .topTrailing) {
+                    if let shortcutNumber {
+                        ShortcutBadge(number: shortcutNumber)
+                            .offset(x: 6, y: -6)
+                    }
+                }
 
                 let chipBg = (colorScheme == .dark) ? Color.white.opacity(0.92) : Color.black
                 let chipFg = (colorScheme == .dark) ? Color.black : Color.white
@@ -58,12 +64,6 @@ struct StoryItem: View {
                     .clipShape(Capsule())
                     .lineLimit(1)
                     .frame(width: 64)
-            }
-            .overlay(alignment: .topTrailing) {
-                if let shortcutNumber {
-                    ShortcutBadge(number: shortcutNumber)
-                        .offset(x: 12, y: -6)
-                }
             }
         }
         .buttonStyle(.plain)

@@ -45,6 +45,12 @@ struct ProjectStoryItem: View {
                     }
                 )
                 .padding(.top, 2)
+                .overlay(alignment: .topTrailing) {
+                    if let shortcutNumber {
+                        ShortcutBadge(number: shortcutNumber)
+                            .offset(x: 6, y: -6)
+                    }
+                }
 
                 let chipBg = (colorScheme == .dark) ? Color.white.opacity(0.92) : Color.black
                 let chipFg = (colorScheme == .dark) ? Color.black : Color.white
@@ -75,12 +81,6 @@ struct ProjectStoryItem: View {
                     .frame(width: 64)
             }
             .opacity((dimmed && !isSelected) ? 0.45 : 1)
-            .overlay(alignment: .topTrailing) {
-                if let shortcutNumber {
-                    ShortcutBadge(number: shortcutNumber)
-                        .offset(x: 12, y: -6)
-                }
-            }
         }
         .buttonStyle(.plain)
     }
