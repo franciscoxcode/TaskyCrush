@@ -59,6 +59,7 @@ struct MacHomeView: View {
     @State private var selection: TaskFilter = .all
     @State private var showingAddProject = false
     @State private var editingProject: MacProject?
+    @State private var editingTask: TaskRecord?
     @State private var persistenceError: PersistenceError?
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var dateShortcut: DateShortcut = .today
@@ -108,6 +109,9 @@ struct MacHomeView: View {
                 deleteProject(id: project.id)
             }
         }
+        .sheet(item: $editingTask) { task in
+            editTaskSheet(for: task)
+        }
         .sheet(isPresented: $isPresentingAddTask) {
             addTaskSheet
         }
@@ -129,6 +133,12 @@ struct MacHomeView: View {
             guard let selectedId = selectedNoteTaskId else { return }
             if !ids.contains(selectedId) {
                 selectedNoteTaskId = nil
+            }
+        }
+        .onChange(of: taskRecords.map(\.id)) { _, ids in
+            guard let currentEditing = editingTask else { return }
+            if !ids.contains(currentEditing.id) {
+                editingTask = nil
             }
         }
     }
@@ -185,6 +195,50 @@ struct MacHomeView: View {
             },
             onSaveFull: { title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, tag, recurrence in
                 createTask(title: title, project: project, difficulty: difficulty, resistance: resistance, estimated: estimated, dueDate: dueDate, dueTime: dueTime, reminders: reminders, tag: tag, recurrence: recurrence)
+            }
+        )
+    }
+
+    private func editTaskSheet(for record: TaskRecord) -> some View {
+        let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
+        let item = TaskItem(record: record, projectLookup: lookup)
+
+        return EditTaskView(
+            task: item,
+            projects: projectItemsForAddSheet,
+            tasks: taskItemsForAddSheet,
+            onCreateProject: { name, emoji, colorName in
+                if let project = addProject(name: name, emoji: emoji, colorName: colorName) {
+                    return ProjectItem(record: project)
+                }
+                return ProjectItem(name: name, emoji: emoji, colorName: colorName)
+            },
+            onAddProjectTag: { projectId, tag in
+                addTag(tag, to: projectId)
+            },
+            onRenameProjectTag: { projectId, old, new in
+                renameTag(on: projectId, from: old, to: new)
+            },
+            onDeleteProjectTag: { projectId, tag in
+                deleteTag(on: projectId, tag: tag)
+            },
+            onSave: { title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, recurrence, tag in
+                updateTask(
+                    record,
+                    title: title,
+                    project: project,
+                    difficulty: difficulty,
+                    resistance: resistance,
+                    estimated: estimated,
+                    dueDate: dueDate,
+                    dueTime: dueTime,
+                    reminders: reminders,
+                    recurrence: recurrence,
+                    tag: tag
+                )
+            },
+            onDelete: {
+                deleteTask(record)
             }
         )
     }
@@ -473,6 +527,7 @@ struct MacHomeView: View {
         )
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onSecondaryClick { editingTask = task }
         .onTapGesture { handleTaskSelection(task) }
     }
 
@@ -818,6 +873,102 @@ struct MacHomeView: View {
         let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
         let item = TaskItem(record: record, projectLookup: lookup)
         NotificationManager.shared.scheduleReminders(for: item)
+    }
+
+    private func updateTask(
+        _ task: TaskRecord,
+        title: String,
+        project: ProjectItem?,
+        difficulty: TaskDifficulty,
+        resistance: TaskResistance,
+        estimated: TaskEstimatedTime,
+        dueDate: Date,
+        dueTime: DateComponents?,
+        reminders: [TaskReminder],
+        recurrence: RecurrenceRule?,
+        tag: String?
+    ) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        let normalizedDueDate = TaskItem.defaultDueDate(dueDate)
+        let limitedReminders = Array(reminders.prefix(3))
+        let normalizedTag = sanitizedTag(for: project, rawTag: tag)
+        let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
+        let previousItem = TaskItem(record: task, projectLookup: lookup)
+        let previousProjectId = task.projectId
+
+        task.title = trimmedTitle
+        task.projectId = project?.id
+        task.projectSnapshot = project
+        task.difficulty = difficulty
+        task.resistance = resistance
+        task.estimatedTime = estimated
+        task.dueDate = normalizedDueDate
+        task.dueTimeComponents = dueTime
+        task.reminders = limitedReminders
+        task.recurrence = recurrence
+
+        if previousProjectId != project?.id {
+            task.tag = nil
+        }
+        if let normalizedTag {
+            task.tag = normalizedTag
+        } else if project == nil {
+            task.tag = nil
+        }
+
+        do {
+            try modelContext.save()
+            let updatedItem = TaskItem(record: task, projectLookup: lookup)
+            NotificationManager.shared.cancelReminders(for: previousItem)
+            NotificationManager.shared.scheduleReminders(for: updatedItem)
+        } catch {
+            restoreTask(task, from: previousItem)
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func deleteTask(_ task: TaskRecord) {
+        let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
+        let previousItem = TaskItem(record: task, projectLookup: lookup)
+        modelContext.delete(task)
+        do {
+            try modelContext.save()
+            NotificationManager.shared.cancelReminders(for: previousItem)
+            if selectedNoteTaskId == previousItem.id {
+                selectedNoteTaskId = nil
+            }
+            if editingTask?.id == previousItem.id {
+                editingTask = nil
+            }
+        } catch {
+            if task.modelContext == nil {
+                modelContext.insert(task)
+            }
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func restoreTask(_ task: TaskRecord, from item: TaskItem) {
+        task.title = item.title
+        task.projectId = item.project?.id
+        task.projectSnapshot = item.project
+        task.difficulty = item.difficulty
+        task.resistance = item.resistance
+        task.estimatedTime = item.estimatedTime
+        task.dueDate = item.dueDate
+        task.dueTimeComponents = item.dueTimeComponents
+        task.reminders = item.reminders
+        task.recurrence = item.recurrence
+        task.tag = item.tag
+        task.isDone = item.isDone
+        task.completedAt = item.completedAt
+    }
+
+    private func sanitizedTag(for project: ProjectItem?, rawTag: String?) -> String? {
+        guard project != nil else { return nil }
+        return rawTag?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 
     private func toggleCompletion(for task: TaskRecord) {
