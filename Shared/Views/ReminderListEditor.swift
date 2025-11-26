@@ -10,12 +10,13 @@ struct ReminderListEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if availableKinds.count > 1 {
-                Picker("Reminder type", selection: $selectedKind) {
+                Picker("", selection: $selectedKind) {
                     ForEach(availableKinds) { kind in
                         Text(kind.label).tag(kind)
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
             }
 
             reminderList
@@ -57,11 +58,7 @@ struct ReminderListEditor: View {
     private var reminderList: some View {
         let pairs = matchingPairs
         if pairs.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(reminders.isEmpty ? "No reminders yet" : "No reminders of this type")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            EmptyView()
         } else {
             ForEach(pairs, id: \.reminder.id) { pair in
                 ReminderRowView(reminder: $reminders[pair.index]) {
@@ -139,53 +136,72 @@ private struct ReminderRowView: View {
 
     private var relativeControls: some View {
         HStack(spacing: 12) {
-            Button(action: decrementRelativeValue) {
-                Image(systemName: "minus.circle.fill")
-            }
-            .buttonStyle(.plain)
-            .disabled(reminder.relativeValue <= 1)
-
-            Text("\(reminder.relativeValue)")
-                .font(.body.monospacedDigit())
-                .frame(minWidth: 28)
-
-            Button(action: incrementRelativeValue) {
-                Image(systemName: "plus.circle.fill")
-            }
-            .buttonStyle(.plain)
-
-            Menu {
-                Picker("Reminder unit", selection: $reminder.relativeUnit) {
-                    ForEach(TaskReminder.RelativeUnit.allCases) { unit in
-                        Text(unit.pluralName.capitalized).tag(unit)
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(unitLabel)
-                    Image(systemName: "chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            }
-
-            Text("before event")
+            valueSelectionMenu
+            unitSelectionMenu
+            Text("before due date")
                 .foregroundStyle(.secondary)
         }
     }
 
+    private var valueSelectionMenu: some View {
+        Menu {
+            ForEach(relativeValueChoices, id: \.self) { value in
+                Button(action: { reminder.relativeValue = value }) {
+                    HStack {
+                        Text("\(value)")
+                        if reminder.relativeValue == value {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(reminder.relativeValue)")
+                    .font(.body.monospacedDigit())
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+    }
+
+    private var unitSelectionMenu: some View {
+        Menu {
+            ForEach(TaskReminder.RelativeUnit.allCases) { unit in
+                Button(action: { reminder.relativeUnit = unit }) {
+                    HStack {
+                        Text(unit.pluralName.capitalized)
+                        if reminder.relativeUnit == unit {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unitLabel)
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+    }
+
+    private var relativeValueChoices: [Int] {
+        let upperBound = max(60, reminder.relativeValue)
+        return Array(1...upperBound)
+    }
+
     private var unitLabel: String {
         reminder.relativeValue == 1 ? reminder.relativeUnit.singularName : reminder.relativeUnit.pluralName
-    }
-
-    private func decrementRelativeValue() {
-        reminder.relativeValue = max(1, reminder.relativeValue - 1)
-    }
-
-    private func incrementRelativeValue() {
-        reminder.relativeValue = min(999, reminder.relativeValue + 1)
     }
 }

@@ -41,6 +41,7 @@ struct AddTaskView: View {
     @State private var duePreset: DuePreset = .today
     @State private var dueDate: Date = TaskItem.defaultDueDate()
     @State private var showDueInfo = false
+    @State private var showRemindersInfo = false
     @State private var showCustomDatePicker = false
     // Due time & reminders
     @State private var hasDueTime: Bool = false
@@ -319,23 +320,34 @@ struct AddTaskView: View {
 
     @ViewBuilder
     private var remindersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("Reminders").font(.headline)
+                Button { showRemindersInfo.toggle() } label: { Image(systemName: "info.circle") }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showRemindersInfo, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                        Text("You can add up to three reminders per task.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(12)
+                            .frame(maxWidth: 260)
+                    }
+                    .presentationCompactAdaptation(.popover)
+                Spacer()
+            }
             ReminderListEditor(
                 reminders: $reminderDrafts,
                 dueTimeIsSet: hasDueTime,
                 onFirstReminderAdded: { NotificationManager.shared.requestAuthorizationIfNeeded() }
             )
-            Text("Reminders")
-            Text("Up to three reminders per task.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 
     @ViewBuilder
     private var repeatSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle("Repeat", isOn: $repeatEnabled)
+            Text("Repeat").font(.headline)
+            Toggle("Repeat this task", isOn: $repeatEnabled)
             if repeatEnabled {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Frequency").font(.headline)
