@@ -33,7 +33,7 @@ struct StoryItem: View {
                 .overlay(alignment: .topTrailing) {
                     if let shortcutNumber {
                         ShortcutBadge(number: shortcutNumber)
-                            .offset(x: 6, y: -6)
+                            .offset(x: -4, y: -2)
                     }
                 }
 

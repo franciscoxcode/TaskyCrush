@@ -226,9 +226,9 @@ struct MacHomeView: View {
                         }
                     }
 
-                    ForEach(Array(orderedProjectsForScope().enumerated()), id: \.element.id) { offset, project in
+                    ForEach(orderedProjectsForScope(), id: \.id) { project in
                         let hasActive = projectHasTasksForCurrentScope(project)
-                        let shortcutNumber = offset + 2
+                        let shortcutNumber = projectShortcutLookup[project.id]
                         shortcutStoryItem(number: shortcutNumber) {
                             ProjectStoryItem(
                                 project: project,
@@ -522,6 +522,12 @@ struct MacHomeView: View {
         return taskRecords.map { TaskItem(record: $0, projectLookup: lookup) }
     }
 
+    private var projectShortcutLookup: [UUID: Int] {
+        Dictionary(uniqueKeysWithValues: projects.enumerated().map { index, project in
+            (project.id, index + 2)
+        })
+    }
+
     private var filteredTasks: [TaskRecord] {
         let base = taskRecords.filter { !$0.isDone }
         switch selection {
@@ -626,9 +632,9 @@ struct MacHomeView: View {
     }
 
     @ViewBuilder
-    private func shortcutStoryItem<Content: View>(number: Int, @ViewBuilder content: () -> Content) -> some View {
+    private func shortcutStoryItem<Content: View>(number: Int?, @ViewBuilder content: () -> Content) -> some View {
         let built = content()
-        if let key = shortcutKeyEquivalent(for: number) {
+        if let number, let key = shortcutKeyEquivalent(for: number) {
             built.keyboardShortcut(key, modifiers: [])
         } else {
             built
