@@ -200,6 +200,7 @@ struct MacHomeView: View {
                     ) {
                         showingAddProject = true
                     }
+                    .keyboardShortcut("p", modifiers: [])
 
                     StoryItem(
                         title: "Todos",
@@ -838,7 +839,7 @@ private struct FloatingAddButton: View {
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
         .accessibilityLabel("Nueva tarea")
-        .keyboardShortcut("n", modifiers: [])
+        .keyboardShortcut("t", modifiers: [])
     }
 }
 
