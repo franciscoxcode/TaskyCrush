@@ -24,6 +24,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Stay motivated with a live coin badge, instant point rewards on completion, and a full completed-history sheet that lets you reschedule, edit, and note-take without leaving the flow.
 - Work quickly through inline sheets for adding tasks, managing projects, picking emojis, and opening the markdown note editor right from the main screen.
 - Mirror the same “story” style on macOS with a companion target that now reads/writes the exact same SwiftData store, so projects and tasks move seamlessly between iPhone, iPad, and Mac.
+- On macOS you now get the same rich Add Task flow as iOS, complete with the floating `＋` button, a global `N` shortcut, and every field (projects, tags, reminders, recurrence, notes) running off the shared SwiftData context.
 - Keep every device in sync with a SwiftData model container backed by the CloudKit container `iCloud.com.franciscocasillas.TaskyCrush`, while still working offline thanks to an automatic local-store fallback.
 
 ### Recent UI updates (macOS)
@@ -34,6 +35,7 @@ Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos i
 - Added calendar-driven shortcuts (Today, Tomorrow, Weekend, Pick Date) so the macOS list can filter tasks by date and only show the picker when needed.
 - Added a split task/note layout with a responsive header so the selected note’s metadata aligns with the task column title, and the close button anchors to the right edge of the metadata row.
 - Rebuilt the note sidebar card: the placeholder now matches the typing inset, autosave strings are in English, and the status indicator reports the last update time directly in the note footer.
+- Added the full-screen Add Task sheet from iOS to macOS, triggered by a floating button or the `N` key, so you can create tasks (projects, tags, reminders, recurrence, notes) without reaching for another device.
 ---
 
 ## Stack Used
@@ -60,11 +62,11 @@ When you finish a repeating task, Tasky Crush doesn’t just clone it, it pipes 
 /Shared/Models/SwiftDataModels.swift    # @Model-backed TaskRecord/ProjectRecord definitions for SwiftData + CloudKit
 /Shared/Models/DataController.swift     # Singleton that builds the SwiftData container with CloudKit + local fallbacks
 /Shared/Models/TaskDataStore.swift      # Persistence facade that fetches/saves models through SwiftData and handles migration
-/Utils/RecurrenceEngine.swift    # Date engine that advances repeating tasks with weekday/weekend scope rules
-/Utils/NotificationManager.swift # Singleton for requesting permission and scheduling or cancelling local reminders
+/Shared/Utils/RecurrenceEngine.swift    # Date engine that advances repeating tasks with weekday/weekend scope rules
+/Shared/Utils/NotificationManager.swift # Singleton for requesting permission and scheduling or cancelling local reminders
 /ViewModels/HomeViewModel.swift  # Observable store loading/persisting data, rolling overdue tasks, and managing points/tags
 /Views/ContentView.swift         # Main dashboard orchestrating filters, task lists, rewards, and all management sheets
-/Views/AddTaskView.swift         # Sheet form to capture task details, choose projects/tags, reminders, and recurrence
+/Shared/Views/AddTaskView.swift         # Sheet form (now shared with macOS) to capture task details, choose projects/tags, reminders, and recurrence
 ```
 
 ---

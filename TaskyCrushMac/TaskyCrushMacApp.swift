@@ -5,6 +5,10 @@ import SwiftData
 struct TaskyCrushMacApp: App {
     private let dataController = DataController.shared
 
+    init() {
+        NotificationManager.shared.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             MacHomeView()

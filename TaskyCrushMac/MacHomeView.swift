@@ -63,6 +63,7 @@ struct MacHomeView: View {
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var dateShortcut: DateShortcut = .today
     @State private var selectedNoteTaskId: UUID? = nil
+    @State private var isPresentingAddTask = false
 
     private static let noteHeaderDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -84,6 +85,55 @@ struct MacHomeView: View {
     }
 
     var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            mainContent
+
+            FloatingAddButton {
+                presentAddTask()
+            }
+            .padding(.trailing, 32)
+            .padding(.bottom, 24)
+        }
+        .sheet(isPresented: $showingAddProject) {
+            MacAddProjectView { name, emoji in
+                if let project = addProject(name: name, emoji: emoji) {
+                    selection = .project(project.id)
+                }
+            }
+        }
+        .sheet(item: $editingProject) { project in
+            MacEditProjectView(project: project) { name, emoji in
+                updateProject(id: project.id, name: name, emoji: emoji)
+            } onDelete: {
+                deleteProject(id: project.id)
+            }
+        }
+        .sheet(isPresented: $isPresentingAddTask) {
+            addTaskSheet
+        }
+        .alert("No pudimos guardar tus cambios", isPresented: .init(
+            get: { persistenceError != nil },
+            set: { if !$0 { persistenceError = nil } }
+        )) {
+            Button("OK", role: .cancel) { persistenceError = nil }
+        } message: {
+            if let message = persistenceError?.message {
+                Text(message)
+            }
+        }
+        .onChange(of: projectRecords.map(\.id)) { _, ids in
+            guard case let .project(id) = selection, !ids.contains(id) else { return }
+            selection = .all
+        }
+        .onChange(of: displayedTasks.map(\.id)) { _, ids in
+            guard let selectedId = selectedNoteTaskId else { return }
+            if !ids.contains(selectedId) {
+                selectedNoteTaskId = nil
+            }
+        }
+    }
+
+    private var mainContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             projectsRow
 
@@ -104,40 +154,39 @@ struct MacHomeView: View {
         }
         .padding(24)
         .frame(minWidth: 900, minHeight: 560)
-        .sheet(isPresented: $showingAddProject) {
-            MacAddProjectView { name, emoji in
-                if let newId = addProject(name: name, emoji: emoji) {
-                    selection = .project(newId)
+    }
+
+    private var addTaskSheet: some View {
+        let preselectedProjectId: ProjectItem.ID? = {
+            if case let .project(id) = selection {
+                return id
+            }
+            return nil
+        }()
+
+        return AddTaskView(
+            projects: projectItemsForAddSheet,
+            tasks: taskItemsForAddSheet,
+            preSelectedProjectId: preselectedProjectId,
+            onCreateProject: { name, emoji, colorName in
+                if let record = addProject(name: name, emoji: emoji, colorName: colorName) {
+                    return ProjectItem(record: record)
                 }
+                return ProjectItem(name: name, emoji: emoji, colorName: colorName)
+            },
+            onAddProjectTag: { projectId, tag in
+                addTag(tag, to: projectId)
+            },
+            onRenameProjectTag: { projectId, old, new in
+                renameTag(on: projectId, from: old, to: new)
+            },
+            onDeleteProjectTag: { projectId, tag in
+                deleteTag(on: projectId, tag: tag)
+            },
+            onSaveFull: { title, project, difficulty, resistance, estimated, dueDate, dueTime, reminders, tag, recurrence in
+                createTask(title: title, project: project, difficulty: difficulty, resistance: resistance, estimated: estimated, dueDate: dueDate, dueTime: dueTime, reminders: reminders, tag: tag, recurrence: recurrence)
             }
-        }
-        .sheet(item: $editingProject) { project in
-            MacEditProjectView(project: project) { name, emoji in
-                updateProject(id: project.id, name: name, emoji: emoji)
-            } onDelete: {
-                deleteProject(id: project.id)
-            }
-        }
-        .alert("No pudimos guardar tus cambios", isPresented: .init(
-            get: { persistenceError != nil },
-            set: { if !$0 { persistenceError = nil } }
-        )) {
-            Button("OK", role: .cancel) { persistenceError = nil }
-        } message: {
-            if let message = persistenceError?.message {
-                Text(message)
-            }
-        }
-        .onChange(of: projectRecords.map(\.id)) { ids in
-            guard case let .project(id) = selection, !ids.contains(id) else { return }
-            selection = .all
-        }
-        .onChange(of: displayedTasks.map(\.id)) { ids in
-            guard let selectedId = selectedNoteTaskId else { return }
-            if !ids.contains(selectedId) {
-                selectedNoteTaskId = nil
-            }
-        }
+        )
     }
 
     private var projectsRow: some View {
@@ -448,6 +497,17 @@ struct MacHomeView: View {
             .map(MacProject.init(record:))
     }
 
+    private var projectItemsForAddSheet: [ProjectItem] {
+        projectRecords
+            .sorted(by: projectSortComparator)
+            .map(ProjectItem.init(record:))
+    }
+
+    private var taskItemsForAddSheet: [TaskItem] {
+        let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
+        return taskRecords.map { TaskItem(record: $0, projectLookup: lookup) }
+    }
+
     private var filteredTasks: [TaskRecord] {
         let base = taskRecords.filter { !$0.isDone }
         switch selection {
@@ -515,6 +575,10 @@ struct MacHomeView: View {
         }
     }
 
+    private func presentAddTask() {
+        isPresentingAddTask = true
+    }
+
     private func toggleSelection(for projectID: UUID) {
         if selection == .project(projectID) {
             selection = .all
@@ -524,16 +588,22 @@ struct MacHomeView: View {
     }
 
     @discardableResult
-    private func addProject(name: String, emoji: String) -> UUID? {
+    private func addProject(name: String, emoji: String, colorName: String? = nil, tags: [String] = []) -> ProjectRecord? {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty, !trimmedEmoji.isEmpty else { return nil }
         let nextSortOrder = (projectRecords.compactMap { $0.sortOrder }.max() ?? -1) + 1
-        let record = ProjectRecord(name: trimmedName, emoji: trimmedEmoji, sortOrder: nextSortOrder)
+        let record = ProjectRecord(
+            name: trimmedName,
+            emoji: trimmedEmoji,
+            colorName: colorName,
+            sortOrder: nextSortOrder,
+            tags: tags
+        )
         modelContext.insert(record)
         do {
             try modelContext.save()
-            return record.id
+            return record
         } catch {
             modelContext.delete(record)
             persistenceError = PersistenceError(message: error.localizedDescription)
@@ -585,6 +655,100 @@ struct MacHomeView: View {
         }
     }
 
+    private func addTag(_ tag: String, to projectID: UUID) {
+        guard let record = projectRecords.first(where: { $0.id == projectID }) else { return }
+        let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let previous = record.tags
+        var set = Set(previous.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        set.insert(trimmed)
+        record.tags = Array(set)
+        do {
+            try modelContext.save()
+        } catch {
+            record.tags = previous
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func renameTag(on projectID: UUID, from original: String, to newValue: String) {
+        guard let record = projectRecords.first(where: { $0.id == projectID }) else { return }
+        let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let previous = record.tags
+        var tags = previous
+        if let index = tags.firstIndex(where: { $0.caseInsensitiveCompare(original) == .orderedSame }) {
+            tags[index] = trimmed
+        } else {
+            return
+        }
+        record.tags = tags
+        do {
+            try modelContext.save()
+        } catch {
+            record.tags = previous
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func deleteTag(on projectID: UUID, tag: String) {
+        guard let record = projectRecords.first(where: { $0.id == projectID }) else { return }
+        let previous = record.tags
+        record.tags.removeAll { $0.caseInsensitiveCompare(tag) == .orderedSame }
+        do {
+            try modelContext.save()
+        } catch {
+            record.tags = previous
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func createTask(
+        title: String,
+        project: ProjectItem?,
+        difficulty: TaskDifficulty,
+        resistance: TaskResistance,
+        estimated: TaskEstimatedTime,
+        dueDate: Date,
+        dueTime: DateComponents?,
+        reminders: [TaskReminder],
+        tag: String?,
+        recurrence: RecurrenceRule?
+    ) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        let normalizedDay = TaskItem.defaultDueDate(dueDate)
+        let sanitizedTag = (project != nil) ? tag?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty : nil
+        let record = TaskRecord(
+            title: trimmedTitle,
+            projectId: project?.id,
+            tag: sanitizedTag,
+            difficulty: difficulty,
+            resistance: resistance,
+            estimatedTime: estimated,
+            dueDate: normalizedDay,
+            dueTimeComponents: dueTime,
+            recurrence: recurrence,
+            reminders: Array(reminders.prefix(3)),
+            projectSnapshot: project
+        )
+        modelContext.insert(record)
+        do {
+            try modelContext.save()
+            scheduleRemindersIfNeeded(for: record)
+        } catch {
+            modelContext.delete(record)
+            persistenceError = PersistenceError(message: error.localizedDescription)
+        }
+    }
+
+    private func scheduleRemindersIfNeeded(for record: TaskRecord) {
+        guard !record.reminders.isEmpty else { return }
+        let lookup = Dictionary(uniqueKeysWithValues: projectRecords.map { ($0.id, $0) })
+        let item = TaskItem(record: record, projectLookup: lookup)
+        NotificationManager.shared.scheduleReminders(for: item)
+    }
+
     private func toggleCompletion(for task: TaskRecord) {
         let previousDone = task.isDone
         let previousCompletedAt = task.completedAt
@@ -618,6 +782,24 @@ struct MacHomeView: View {
     private struct PersistenceError: Identifiable {
         let id = UUID()
         let message: String
+    }
+}
+
+private struct FloatingAddButton: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(Color.accentColor))
+        }
+        .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+        .accessibilityLabel("Nueva tarea")
+        .keyboardShortcut("n", modifiers: [])
     }
 }
 
@@ -726,8 +908,8 @@ private struct MacNoteSidebar: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear { syncFromTask() }
-        .onChange(of: task.id) { _ in syncFromTask() }
-        .onChange(of: task.noteMarkdown ?? "") { _ in syncFromTask() }
+        .onChange(of: task.id) { syncFromTask() }
+        .onChange(of: task.noteMarkdown ?? "") { syncFromTask() }
         .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
             autoSaveIfNeeded()
         }
@@ -818,5 +1000,28 @@ private extension ProjectItem {
             sortOrder: record.sortOrder,
             tags: record.tags
         )
+    }
+}
+
+private extension TaskItem {
+    init(record: TaskRecord, projectLookup: [UUID: ProjectRecord]) {
+        let resolvedProject = record.projectId.flatMap { projectLookup[$0] }.map(ProjectItem.init(record:)) ?? record.projectSnapshot
+        self.init(
+            id: record.id,
+            title: record.title,
+            isDone: record.isDone,
+            project: resolvedProject,
+            difficulty: record.difficulty,
+            resistance: record.resistance,
+            estimatedTime: record.estimatedTime,
+            dueDate: record.dueDate,
+            dueTimeComponents: record.dueTimeComponents,
+            reminders: record.reminders,
+            recurrence: record.recurrence,
+            noteMarkdown: record.noteMarkdown,
+            noteUpdatedAt: record.noteUpdatedAt,
+            tag: record.tag
+        )
+        self.completedAt = record.completedAt
     }
 }
