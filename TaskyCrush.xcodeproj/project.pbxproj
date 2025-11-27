@@ -8,7 +8,7 @@
 
 /* Begin PBXFileReference section */
 		EA8FDD392E788BBD008B660B /* TaskyCrush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaskyCrush.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaskyCrushMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EACDF6202FBE7BEE00A5DADD /* Tasky Crush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Tasky Crush.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -84,7 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				EA8FDD392E788BBD008B660B /* TaskyCrush.app */,
-				EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */,
+				EACDF6202FBE7BEE00A5DADD /* Tasky Crush.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,7 +135,7 @@
 			packageProductDependencies = (
 			);
 			productName = TaskyCrushMac;
-			productReference = EACDF6202FBE7BEE00A5DADD /* TaskyCrushMac.app */;
+			productReference = EACDF6202FBE7BEE00A5DADD /* Tasky Crush.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -414,6 +414,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TaskyCrushMac/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tasky Crush";
+				INFOPLIST_KEY_CFBundleName = "Tasky Crush";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -422,7 +423,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.franciscoasillas.taskymac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Tasky Crush";
 				SDKROOT = macosx;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -444,6 +445,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TaskyCrushMac/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tasky Crush";
+				INFOPLIST_KEY_CFBundleName = "Tasky Crush";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -452,7 +454,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.franciscoasillas.taskymac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Tasky Crush";
 				SDKROOT = macosx;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
