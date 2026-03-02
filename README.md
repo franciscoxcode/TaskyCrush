@@ -8,10 +8,12 @@
 Tasky Crush is a **SwiftUI** productivity companion that organizes your to-dos into project “stories” and day filters while handing out shiny coin points whenever you clear a task. Capture tasks with tags, due dates, reminders, and repeating rules, spin up emoji-colored projects on the fly, and jump into markdown notes or your completed history without leaving the home screen.
 
 ---
-## 📷 Screenshot
+## 📷 Screenshots
 
-![Your paragraph text](https://github.com/user-attachments/assets/a5d4f5d3-457d-4c86-adf0-4e1f1ff0bc02)
+<img width="3412" height="1972" alt="tasky03" src="https://github.com/user-attachments/assets/33ac7378-cdf2-499b-a620-3d41d055147a" />
 
+<img width="3412" height="1972" alt="tasky02" src="https://github.com/user-attachments/assets/38cd0512-50ba-495b-9d90-6d060c303dfe" />
+<img width="3412" height="1972" alt="tasky01" src="https://github.com/user-attachments/assets/cc9c010c-5401-4718-8714-2b10149c771d" />
 
 
 ---
